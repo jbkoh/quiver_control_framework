@@ -95,3 +95,9 @@ class bd_wrapper:
 		except BDError as e:
 			print e
 			return False
+
+	def set_sensor_latest(self, uuid, sensorType, value):
+		currTime = datetime.now()
+		ts = [{currTime:value}]
+		return self.set_sensor_ts(uuid,sensorType,ts)
+
