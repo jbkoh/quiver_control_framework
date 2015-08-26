@@ -17,7 +17,7 @@ import operator
 #Example of time init
 # self.pst.localize(offTime, is_dst=True)
 
-class bd_wrapper:
+class bdWrapper:
 
 	bdDS = None
 	pst = timezone('US/Pacific')
@@ -42,29 +42,40 @@ class bd_wrapper:
 
 
 	def get_sensor_ts(self, uuid, sensorType, beginTime, endTime):
-# uuid(string), sensorType(string), beginTime(datetime), endTime(datetime) -> timeseries (pd.DataFrame)
+# uuid(string), sensorType(string), beginTime(datetime), endTime(datetime) -> timeseries (pd.Series)
 # Note: beginTime and endtime should not be normalized already. should be a raw format.
 		isoBegin = self.pst.localize(beginTime)
 		isoEnd = self.pst.localize(endTime)
 		try:
 			rawData = self.bdDS.get_timeseries_datapoints(uuid, sensorType, isoBegin, isoEnd)
-			pdts = self.rawts2pdts(rawData['timeseries'])
-			return pdts
+			pdseries = self.rawts2pdseries(rawData['timeseries'])
+			#pdts = self.rawts2pdts(rawData['timeseries'])
+			return pdseries
 		except BDError as e:
 			print e
 			return None
 		
 # TODO: Can I do this better? hard to convert list of dict into dataframe
 	def rawts2pdts(self, rawData):
-		rawData = dict([(key,d[key]) for d in rawData for key in d])
-		sortedData = OrderedDict(sorted(rawData.items(), key=operator.itemgetter(0)))
+		rawData = OrderedDict([(key,d[key]) for d in rawData for key in d])
+		sortedData = rawData
+		#rawData = dict([(key,d[key]) for d in rawData for key in d])
+		#sortedData = OrderedDict(sorted(rawData.items(), key=operator.itemgetter(0)))
 		pdts = pd.DataFrame({'timestamp':sortedData.keys(), 'value':sortedData.values()})
 		g = lambda tp:datetime.strptime(tp, self.bdStrFormat).replace(tzinfo=self.utc).astimezone(self.pst)
 		pdts['timestamp'] = pdts['timestamp'].apply(g)
 		return pdts
 
+	def rawts2pdseries(self,rawData):
+		rawData = OrderedDict([(key,d[key]) for d in rawData for key in d])
+		for key in rawData.keys():
+			newKey = datetime.strptime(key, self.bdStrFormat).replace(tzinfo=self.utc).astimezone(self.pst)
+			rawData[newKey] = rawData.pop(key)
+		pdseries = pd.Series(data=rawData.values(),index=rawData.keys())
+		return pdseries
+
 	def get_zone_sensor_ts(self, zone, template, sensorType, beginTime, endTime):
-# zone(string), template(string), sensorType(string), beginTime(datetime), endTime(datetime) -> ts(pd.DataFrame)
+# zone(string), template(string), sensorType(string), beginTime(datetime), endTime(datetime) -> ts(pd.Series)
 # Note: This is a wrapper for easy use of get sensor time series
 		context = {'room':'rm-'+zone, 'template':template}
 		try:
@@ -80,7 +91,7 @@ class bd_wrapper:
 		except BDError as e:
 			print e
 			#TODO or just return None?
-			return pd.DataFrame()
+			return pd.Series()
 
 	def set_sensor_ts(self, uuid, sensorType, ts):
 # uuid(string), sensorType(string), ts(list of dict) -> success(boolean)

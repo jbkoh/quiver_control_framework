@@ -1,5 +1,5 @@
 from enum import Enum
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 
 
 # default occupied command type
@@ -8,16 +8,16 @@ from abc import ABCMeta
 #	standby = 2
 #	occupied = 3
 #
-class oc_type():
+class OcType():
 	commands = (1,2,3) #1=unoccupied, 2=standby, 3=occupied
 
 	def validate(self,given):
-		if gigen in commands:
+		if given in commands:
 			return True
 		else:
 			return False
 
-class temp_type():
+class TempType():
 	minVal = None
 	maxVal = None
 
@@ -31,21 +31,26 @@ class temp_type():
 		else:
 			return False
 
-class master_actuator:
+class Actuator:
 	__metaclass__ = ABCMeta
-	latency_min = None # 0 minimum
+	minLatency = None # 0 minimum
 
 	inputType = None # should be selected among above type classes
+	lowerActuators = list() 
+	higherActuators = list()
 
-	def __init__(self):
+	def __init__(self, minLatency):
+		self.minLatency = minLatency
+
+	@abstractmethod
+	def set_value(self, ts):
+#ts(list of dict)
+		#return self.inputType.validate(given)
 		pass
 
 	@abstractmethod
-	def set_value(self):
-		pass
-
-	@abstractmethod
-	def get_value(self):
+	def get_value(self, beginTime, endTime):
+#beginTime(datetime), endTime(datetime) -> pdts
 		pass
 
 	@abstractmethod #Should this be abm?
