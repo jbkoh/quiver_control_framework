@@ -38,8 +38,10 @@ class Actuator:
 	inputType = None # should be selected among above type classes
 	lowerActuators = list() 
 	higherActuators = list()
+	dependentList = list()
 
 	def __init__(self, minLatency):
+# minLatency(datetime) ->
 		self.minLatency = minLatency
 
 	@abstractmethod

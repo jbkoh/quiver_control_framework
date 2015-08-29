@@ -45,3 +45,10 @@ class CommonSetpoint(Actuator):
 
 	def reset_value(self):
 		pass
+
+	def check_dependency(self, actuType):
+# actuType(str) -> dependent?(boolean)
+		if actuType in self.dependentList:
+			return True
+		else:
+			return False

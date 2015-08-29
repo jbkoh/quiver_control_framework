@@ -35,19 +35,37 @@ class Exper:
 
 	def validate_exp_seq_freq(self,seq):
 # seq(pd.DataFrame) -> valid?(boolean)
+		baseInvalidMsg = "Test sequence is invalid because "
 		for row in seq.iterrows():
 			zone = row[1]['zone']
 			actuType = row[1]['actuator_type']
 			actuator  = self.actuDict[[zone, actuType]]
 			minLatency = actuator.minLatency
 			tp = row[1]['timestamp']
-			
-
-		
+			inrangeRows = np.bitwise_and(seq['timestamp']<tp+minLatency, seq['timestamp']>tp-minLatency)
+			inrangeRows = seq.iloc[inrangeRows]
+			for inrangeRow in inrangeRows.iterrows():
+				if inrangeRow[1]['zone']==zone and inrangeRow[1]['actuator_type']==actuType:
+					print baseInvalidMsg + str(row[1]) + ' is overlapped with ' + str(inrangeRow[1])
+					return False
+		return True
 	
-	def validate_exp_seq_dependency(self, seq):
-		#TODO: implement this
-		pass
+	def validate_exp_seq_dependency(self, seq, minExpLatency):
+# seq(pd.DataFrame) -> valid?(boolean)
+		baseInvalidMsg = "Test sequence is invalid because "
+		for row in seq.iterrows():
+			zone = row[1]['zone']
+			actuType = row[1]['actuator_type']
+			actuator  = self.actuDict[[zone, actuType]]
+			minLatency = actuator.minLatency
+			tp = row[1]['timestamp']
+			inrangeRowaIdx = np.bitwise_and(seq['timestamp']<tp, seq['timestamp']>=tp-minExpLatency)
+			inrangeRows = seq.iloc[inrangeRowsIdx]
+			for inrangeRow in inrangeRows.iterrows():
+				if inrangeRow[1]['zone']==zone and actuator.check_dependency(inrangeRow[1]['actuator_type']):
+					print baseInvalidMsg + str(row[1]) + ' is dependent on ' str(inrangeRow[1])
+					return False
+		return True
 
 	def validate_exp_seq(self, seq):
 		self.validate_exp_seq_freq(self,seq)
