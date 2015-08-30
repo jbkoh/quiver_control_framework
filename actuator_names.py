@@ -3,7 +3,7 @@ class ActuatorNames:
 	nameList = list()
 	
 	def __init__(self):
-		self.nameList.append(commonSetpoint)
+		self.nameList.append(self.commonSetpoint)
 
 	def __contains__(self, given):
 		if given in self.nameList:
