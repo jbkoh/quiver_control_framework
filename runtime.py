@@ -13,9 +13,14 @@ import csv
 import pymongo
 from pytz import timezone
 import json
+import time
+import sys, os
 
-from multiprocessing import Process
+#from multiprocessing import Process
+import threading
 
+# NOTE:
+# 1. Information is only shared through DB Collections. Each collection has lock for synchronization.
 
 class Runtime:
 	ntpURL = 'ntp.ucsd.edu'
@@ -24,13 +29,15 @@ class Runtime:
 	inputTimeFormat = '%m/%d/%Y %H:%M:%S'
 	actuDict= dict()
 	actuNames = ActuatorNames()
-	commandColl = None
+	futureCommColl = None 	# This is a collection for future command sequence. If some of the commands are issues, they are removed from here.
+	logColl = None	 		# This is a collection for log of control. If a command is issued, it is added to here with relevant information.
 
 	def __init__(self):
+		futureCommLock = threading.Lock()
 		self.ntpClient = ntplib.NTPClient()
 		client = pymongo.MongoClient()
 		db = client.quiverdb
-		self.commandColl = CollectionWrapper('command_sequence')
+		self.futureCommColl = CollectionWrapper('command_sequence', futureCommLock)
 		pass
 
 	def update_offset(self):
@@ -42,7 +49,7 @@ class Runtime:
 	def issue_command(self, command):
 		pass
 	
-	def read_seq(self, filename):
+	def read_seqfile(self, filename):
 # filename(string, excel) -> seqList(pd.DataFrame)
 		seqList = pd.read_excel(filename)
 		for row in seqList.iterrows():
@@ -55,12 +62,12 @@ class Runtime:
 		seqList['timestamp'] = pd.to_datetime(seqList['timestamp'])
 		return seqList
 	
-	def store_seq(self, command):
-		self.commandColl.store_dataframe(command)
+	def store_futureseq(self, command):
+		self.futureCommColl.store_dataframe(command)
 
-	def load_seq(self, beginTime, endTime):
+	def load_future_seq(self, beginTime, endTime):
 		query = {'$and':[{'timestamp':{'$lte':endTime}}, {'timestamp':{'$gte':beginTime}}]}
-		return self.commandColl.load_dataframe(query)
+		return self.futureCommColl.load_dataframe(query)
 
 	def actuator_exist(self, zone, actuatorType):
 # zone(string), actuatortype(string) -> existing?(boolean)
@@ -108,17 +115,48 @@ class Runtime:
 		self.validate_command_seq_dependency(self,seq)
 
 	def top_ux(self):
+		seqFileType = 'xlsx'
+		while(1):
+			shellCommand = raw_inpout("Command: ")
+			if seqFileType in shellCommand:
+				# Receive a new sequence filename
+				newFilename = shellCommand
+				newSeq = self.read_seqfile(newFilename)
+				validSeq = self.validate_command_seq(newSeq)
+				self.store(validSeq)
+
+	def now(self):
+		currTime = datetime.now()
+		currTime + self.offset()
+		return currtime
+
+	def issue_seq(self, seq):
+		# TODO: Implement this!
 		pass
 
 	def top_dynamic_control(self):
+		dummyBeginTime = datetime(2000,1,1)
+		controlInterval = 5 # in seconds
+		while(True):
+			currTime = self.now()
+			futureCommands = self.load_future_seq(dummyBeginTime, currTime+timedelta(controlInterval))
+			self.issue_seq(futureCommands)
+			#TODO From here
+			time.sleep(controlInterval)
+
+	def top_ntp(self):
 		while(True):
 			self.update_offset()
-		
+			time.sleep(15*60) # synchronized to NTP server in every 15 minutes
 
 	def top(self):
-		uxProc = Process(target=self.top_ux, args=args1)
-		dynamicControlProc = process(target=self.top_dynamic_control, args=args2)
-		uxProc.start()
-		dynamicControlProc.start()
-		uxProc.join()
-		dynamicControlProc.join()
+		controlT = threading.Thread(target=self.top_dynamic_control)
+		controlT.daemon = True
+		uxT = threading.Thread(target=self.top_ux)
+		uxT.daemon = True
+		ntpT = threading.Thread(target=self.top_ntp)
+		ntpT.daemon = True
+		controlT.start()
+		uxT.start()
+		while(1):
+			pass

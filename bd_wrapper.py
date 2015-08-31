@@ -74,6 +74,8 @@ class bdWrapper:
 		pdseries = pd.Series(data=rawData.values(),index=rawData.keys())
 		return pdseries
 
+
+# TODO: Do not make multiple writing (maybe remove this?)
 	def get_zone_sensor_ts(self, zone, template, sensorType, beginTime, endTime):
 # zone(string), template(string), sensorType(string), beginTime(datetime), endTime(datetime) -> ts(pd.Series)
 # Note: This is a wrapper for easy use of get sensor time series
