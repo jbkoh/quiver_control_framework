@@ -39,16 +39,15 @@ class Actuator:
 	lowerActuators = list() 
 	higherActuators = list()
 	dependentList = list()
+	controlFlag = False
 
 	def __init__(self, minLatency):
 # minLatency(datetime) ->
 		self.minLatency = minLatency
 
 	@abstractmethod
-	def set_value(self, ts):
-#ts(list of dict)
-		#return self.inputType.validate(given)
-		pass
+	def set_value(self, tp, val):
+		self.controlFlag = True
 
 	@abstractmethod
 	def get_value(self, beginTime, endTime):
@@ -57,6 +56,9 @@ class Actuator:
 
 	@abstractmethod #Should this be abm?
 	def reset_value(self):
-		pass
+		self.controlFlag = False
+	
+	def check_control_flag(self):
+		return controlFlag
 
 	

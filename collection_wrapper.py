@@ -8,15 +8,15 @@ class CollectionWrapper:
 	dbName = None
 	collectionName = None
 	collection = None
-	def __init__(self, collName, lock):
-		self.lock = lock
+	def __init__(self, collName):
+		self.lock = threading.Lock()
 		self.dbName = 'quiverdb'
 		self.collectionName = collName
 		client = pymongo.MongoClient()
 		db = client[self.dbName]
 		self.collection = db[collName]
 
-# data(DataFrame) -> 
+# data(DataFrame) -> X
 	def store_dataframe(self, data):
 		self.lock.acquire()
 		dataDict = data.to_dict('records')
@@ -25,6 +25,12 @@ class CollectionWrapper:
 		self.lock.release()
 
 	def load_dataframe(self, query):
+		self.lock.acquire()
+		df = pd.DataFrame(list(self.collection.find(query)))
+		self.lock.release()
+		return df
+
+	def pop_dataframe(self,query):
 		self.lock.acquire()
 		df = pd.DataFrame(list(self.collection.find(query)))
 		self.lock.release()

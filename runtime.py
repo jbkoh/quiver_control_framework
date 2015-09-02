@@ -31,13 +31,16 @@ class Runtime:
 	actuNames = ActuatorNames()
 	futureCommColl = None 	# This is a collection for future command sequence. If some of the commands are issues, they are removed from here.
 	logColl = None	 		# This is a collection for log of control. If a command is issued, it is added to here with relevant information.
+	rollbackColl = None		# This is a collection for rollback. If a command is issued, its corresponding rollback command is added here.
 
 	def __init__(self):
-		futureCommLock = threading.Lock()
+#		futureCommLock = threading.Lock()
 		self.ntpClient = ntplib.NTPClient()
 		client = pymongo.MongoClient()
 		db = client.quiverdb
-		self.futureCommColl = CollectionWrapper('command_sequence', futureCommLock)
+		self.futureCommColl = CollectionWrapper('command_sequence')
+		self.resetColl = CollectionWrapper('reset_queue')
+
 		pass
 
 	def update_offset(self):
@@ -47,9 +50,6 @@ class Runtime:
 		self.timeOffset = ntpTime - datetime.now()
 		return self.timeOffset
 
-	def issue_command(self, command):
-		pass
-	
 	def read_seqfile(self, filename):
 # filename(string, excel) -> seqList(pd.DataFrame)
 		seqList = pd.read_excel(filename)
@@ -63,12 +63,18 @@ class Runtime:
 		seqList['timestamp'] = pd.to_datetime(seqList['timestamp'])
 		return seqList
 	
-	def store_futureseq(self, command):
-		self.futureCommColl.store_dataframe(command)
+	# command(pd.DataFrame) -> X
+	def store_futureseq(self, seq):
+		self.futureCommColl.store_dataframe(seq)
 
 	def load_future_seq(self, beginTime, endTime):
 		query = {'$and':[{'timestamp':{'$lte':endTime}}, {'timestamp':{'$gte':beginTime}}]}
 		futureSeq = self.futureCommColl.load_dataframe(query)
+		return futureSeq
+
+	def load_reset_seq(self, endTime):
+		query = {'timestamp':{'$lte':endTime}}
+		futureSeq = self.resetColl.load_dataframe(query)
 		return futureSeq
 
 	def actuator_exist(self, zone, actuatorType):
@@ -142,8 +148,31 @@ class Runtime:
 		return currTime
 
 	def issue_seq(self, seq):
-		# TODO: Implement this!
-		pass
+		for row in seq.iterrows():
+			tp = row[1]['timestamp']
+			zone = row[1]['zone']
+			setVal = row[1]['value']
+			resetTime = row[1]['reset_time']
+			actuType = row[1]['actuator_type']
+			actuator = self.actuDict[(zone,actuType)]
+			if actuator.check_control_flag():
+				pass
+			else:
+				pass
+			resetVal = None #TODO: Temporal setup. should be defined
+
+			actuator.set_value(tp, setVal)
+			resetDF = pd.DataFrame({'reset_time':resetTime,'zone':zone,'actuator_type':actuType, 'reset_value':resetVal, 'actuator_type':actuType})
+			self.rollbackColl.store_dataframe(resetDF)
+			
+	def reset_seq(self, seq):
+		for row in seq.iterrows():
+			tp = row[1]['timestamp']
+			zone = row[1]['zone']
+			resetVal = row[1]['reset_value']
+			actuType = row[1]['actuator_type']
+			#TODO: How should I reset the value?!!!!!!!!!!
+
 
 	def top_dynamic_control(self):
 		dummyBeginTime = datetime(2000,1,1)
@@ -153,6 +182,8 @@ class Runtime:
 			currTime = self.now()
 			futureCommands = self.load_future_seq(dummyBeginTime, currTime+timedelta(controlInterval))
 			self.issue_seq(futureCommands)
+			resetCommands = self.load_reset_seq
+			self.reset_seq(resetCommands)
 			#TODO From here
 			time.sleep(controlInterval)
 

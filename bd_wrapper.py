@@ -95,22 +95,14 @@ class bdWrapper:
 			#TODO or just return None?
 			return pd.Series()
 
-	def set_sensor_ts(self, uuid, sensorType, ts):
+	def set_sensor(self, uuid, sensorType, tp, val):
 # uuid(string), sensorType(string), ts(list of dict) -> success(boolean)
 # An example of ts: [{datetime(2014,1,1,0,0,0):72}]
 		newts = list()
-		for onedict in ts:
-			newts.append({self.pst.localize(onedict.keys()[0]).isoformat(): onedict.values()[0]})
-
+		newts.append({self.pst.localize(tp).isoformat():val})
 		try:
 			self.bdDS.put_timeseries_datapoints(uuid, sensorType, newts)
 			return True
 		except BDError as e:
 			print e
 			return False
-
-	def set_sensor_latest(self, uuid, sensorType, value):
-		currTime = datetime.now()
-		ts = [{currTime:value}]
-		return self.set_sensor_ts(uuid,sensorType,ts)
-
