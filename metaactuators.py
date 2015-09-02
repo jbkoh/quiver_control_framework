@@ -3,6 +3,8 @@ from master_actuator import Actuator
 from bd_wrapper import bdWrapper
 from actuator_names import ActuatorNames
 
+from datetime import datetime, timedelta
+
 
 #TODO: All the types of actuators classes should be implemented here with the super class, Actuator.
 
@@ -16,7 +18,6 @@ def make_actuator(zone, actuType):
 		return None
 
 class CommonSetpoint(Actuator):
-	inputType = None
 	zone = None
 	bdm = None
 	sensorType = 'PresentValue'
@@ -24,7 +25,8 @@ class CommonSetpoint(Actuator):
 	actuNames = ActuatorNames()
 
 	def __init__ (self, minVal, maxVal, zone):
-		inputType = master_actuator.TempType(minVal, maxVal)
+		super(CommonSetpoint, self).__init__(timedelta(minutes=30))
+		self.inputType = master_actuator.TempType(minVal, maxVal)
 		self.zone = zone
 		self.bdm = bdWrapper()
 		self.template = self.actuNames.commonSetpoint

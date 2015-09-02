@@ -45,6 +45,7 @@ class Runtime:
 		ntpRequest.tx_time
 		ntpTime = datetime.strptime(time.ctime(ntpRequest.tx_time), "%a %b %d %H:%M:%S %Y")
 		self.timeOffset = ntpTime - datetime.now()
+		return self.timeOffset
 
 	def issue_command(self, command):
 		pass
@@ -67,7 +68,8 @@ class Runtime:
 
 	def load_future_seq(self, beginTime, endTime):
 		query = {'$and':[{'timestamp':{'$lte':endTime}}, {'timestamp':{'$gte':beginTime}}]}
-		return self.futureCommColl.load_dataframe(query)
+		futureSeq = self.futureCommColl.load_dataframe(query)
+		return futureSeq
 
 	def actuator_exist(self, zone, actuatorType):
 # zone(string), actuatortype(string) -> existing?(boolean)
@@ -75,6 +77,9 @@ class Runtime:
 			return True
 		else:
 			return False
+			
+	def rollback_to_genie_setting(self):
+		pass
 
 	def validate_command_seq_freq(self,seq):
 # seq(pd.DataFrame) -> valid?(boolean)
@@ -82,11 +87,11 @@ class Runtime:
 		for row in seq.iterrows():
 			zone = row[1]['zone']
 			actuType = row[1]['actuator_type']
-			actuator  = self.actuDict[[zone, actuType]]
+			actuator  = self.actuDict[(zone, actuType)]
 			minLatency = actuator.minLatency
 			tp = row[1]['timestamp']
 			inrangeRows = np.bitwise_and(seq['timestamp']<tp+minLatency, seq['timestamp']>tp-minLatency)
-			inrangeRows = seq.iloc[inrangeRows]
+			inrangeRows = seq.iloc[inrangeRows.values.tolist()]
 			for inrangeRow in inrangeRows.iterrows():
 				if inrangeRow[1]['zone']==zone and inrangeRow[1]['actuator_type']==actuType:
 					print baseInvalidMsg + str(row[1]) + ' is overlapped with ' + str(inrangeRow[1])
@@ -99,11 +104,11 @@ class Runtime:
 		for row in seq.iterrows():
 			zone = row[1]['zone']
 			actuType = row[1]['actuator_type']
-			actuator  = self.actuDict[[zone, actuType]]
+			actuator  = self.actuDict[(zone, actuType)]
 			minLatency = actuator.minLatency
 			tp = row[1]['timestamp']
-			inrangeRowaIdx = np.bitwise_and(seq['timestamp']<tp, seq['timestamp']>=tp-minExpLatency)
-			inrangeRows = seq.iloc[inrangeRowsIdx]
+			inrangeRowsIdx = np.bitwise_and(seq['timestamp']<tp, seq['timestamp']>=tp-minExpLatency)
+			inrangeRows = seq.iloc[inrangeRowsIdx.values.tolist()]
 			for inrangeRow in inrangeRows.iterrows():
 				if inrangeRow[1]['zone']==zone and actuator.check_dependency(inrangeRow[1]['actuator_type']):
 					print baseInvalidMsg + str(row[1]) + ' is dependent on ' + str(inrangeRow[1])
@@ -111,24 +116,30 @@ class Runtime:
 		return True
 
 	def validate_command_seq(self, seq):
-		self.validate_command_seq_freq(self,seq)
-		self.validate_command_seq_dependency(self,seq)
+		return self.validate_command_seq_freq(seq) and \
+				self.validate_command_seq_dependency(seq, timedelta(minutes=5))
 
 	def top_ux(self):
 		seqFileType = 'xlsx'
 		while(1):
-			shellCommand = raw_inpout("Command: ")
+			shellCommand = raw_input("Command: ")
 			if seqFileType in shellCommand:
+		#	if False:
 				# Receive a new sequence filename
 				newFilename = shellCommand
 				newSeq = self.read_seqfile(newFilename)
-				validSeq = self.validate_command_seq(newSeq)
-				self.store(validSeq)
+				if self.validate_command_seq(newSeq):
+					self.store_futureseq(newSeq)
+					print "Input commands are successfully stored"
+				else:
+					print "Input commands are not valld"
+			print 'UX'
+			time.sleep(1)
 
 	def now(self):
 		currTime = datetime.now()
-		currTime + self.offset()
-		return currtime
+		currTime + self.timeOffset
+		return currTime
 
 	def issue_seq(self, seq):
 		# TODO: Implement this!
@@ -138,6 +149,7 @@ class Runtime:
 		dummyBeginTime = datetime(2000,1,1)
 		controlInterval = 5 # in seconds
 		while(True):
+			#print "begin controlled"
 			currTime = self.now()
 			futureCommands = self.load_future_seq(dummyBeginTime, currTime+timedelta(controlInterval))
 			self.issue_seq(futureCommands)
@@ -146,10 +158,11 @@ class Runtime:
 
 	def top_ntp(self):
 		while(True):
-			self.update_offset()
+			print self.update_offset()
 			time.sleep(15*60) # synchronized to NTP server in every 15 minutes
 
 	def top(self):
+		print '=============Begin of Quiver============='
 		controlT = threading.Thread(target=self.top_dynamic_control)
 		controlT.daemon = True
 		uxT = threading.Thread(target=self.top_ux)
@@ -158,5 +171,11 @@ class Runtime:
 		ntpT.daemon = True
 		controlT.start()
 		uxT.start()
+		ntpT.start()
 		while(1):
 			pass
+#		uxT.join()
+#		controlT.join()
+#		ntpT.join()
+		self.rollback_to_genie_setting()
+		print '==============End of Quiver=============='
