@@ -33,6 +33,7 @@ class CollectionWrapper:
 	def pop_dataframe(self,query):
 		self.lock.acquire()
 		df = pd.DataFrame(list(self.collection.find(query)))
+		self.collection.remove(query)
 		self.lock.release()
 		return df
 

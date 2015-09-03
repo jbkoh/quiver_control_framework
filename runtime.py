@@ -1,7 +1,5 @@
 from actuator_names import ActuatorNames
 import metaactuators
-import collection_wrapper
-reload(collection_wrapper)
 from collection_wrapper import CollectionWrapper
 
 import pandas as pd
@@ -31,7 +29,8 @@ class Runtime:
 	actuNames = ActuatorNames()
 	futureCommColl = None 	# This is a collection for future command sequence. If some of the commands are issues, they are removed from here.
 	logColl = None	 		# This is a collection for log of control. If a command is issued, it is added to here with relevant information.
-	rollbackColl = None		# This is a collection for rollback. If a command is issued, its corresponding rollback command is added here.
+	resetColl = None		# This is a collection for rollback. If a command is issued, its corresponding rollback command is added here.
+	relinquishVal = -1
 
 	def __init__(self):
 #		futureCommLock = threading.Lock()
@@ -40,8 +39,6 @@ class Runtime:
 		db = client.quiverdb
 		self.futureCommColl = CollectionWrapper('command_sequence')
 		self.resetColl = CollectionWrapper('reset_queue')
-
-		pass
 
 	def update_offset(self):
 		ntpRequest = self.ntpClient.request(self.ntpURL)
@@ -74,7 +71,7 @@ class Runtime:
 
 	def load_reset_seq(self, endTime):
 		query = {'timestamp':{'$lte':endTime}}
-		futureSeq = self.resetColl.load_dataframe(query)
+		futureSeq = self.resetColl.pop_dataframe(query)
 		return futureSeq
 
 	def actuator_exist(self, zone, actuatorType):
@@ -84,8 +81,17 @@ class Runtime:
 		else:
 			return False
 			
-	def rollback_to_genie_setting(self):
-		pass
+	def rollback_to_original_setting(self):
+		dummyEndTime = datetime(2030,12,31,0,0,0)
+		resetSeq = self.load_reset_seq(dummyEndTime)
+		for row in resetSeq.iterrows():
+			currTime = self.now()
+			zone = row[1]['zone']
+			actuType = row[1]['actuator_type']
+			resetVal = row[1]['reset_value']
+			actuator = self.actuDict[(zone,actuType)]
+			actuator.reset_value(resetVal, currTime)
+		self.futureCommColl.remove_all()
 
 	def validate_command_seq_freq(self,seq):
 # seq(pd.DataFrame) -> valid?(boolean)
@@ -147,6 +153,7 @@ class Runtime:
 		currTime + self.timeOffset
 		return currTime
 
+#TODO: Think about how to handle errors
 	def issue_seq(self, seq):
 		for row in seq.iterrows():
 			tp = row[1]['timestamp']
@@ -155,23 +162,36 @@ class Runtime:
 			resetTime = row[1]['reset_time']
 			actuType = row[1]['actuator_type']
 			actuator = self.actuDict[(zone,actuType)]
-			if actuator.check_control_flag():
-				pass
+			now = self.now()
+			origVal = actuator.get_value(now-timedelta(hours=1), now).tail(1)
+			print origVal
+			if actuType==self.actuNames.commonSetpoint or actuType==self.actuNames.occupiedCommand:
+				if actuator.check_control_flag():
+					query = {'$and':[{'timestamp':{'$lte':now}}, {'zone':zone},{'actuator_type':actuType}]}
+					resetVal = logColl.load_dataframe(query).tail(1)
+					resetVal = resetVal['reset_value']
+					print resetVal
+				else:
+					resetVal = origVal
 			else:
-				pass
-			resetVal = None #TODO: Temporal setup. should be defined
+				resetVal = self.relinquishVal
 
-			actuator.set_value(tp, setVal)
+			resetVal = None #TODO: Temporal setup. should be defined
+			actuator.set_value(setVal, tp) #TODO: This should not work in test stage
 			resetDF = pd.DataFrame({'reset_time':resetTime,'zone':zone,'actuator_type':actuType, 'reset_value':resetVal, 'actuator_type':actuType})
-			self.rollbackColl.store_dataframe(resetDF)
+			self.resetColl.store_dataframe(resetDF)
+			logDF = pd.DataFrame({'set_time':self.now(), 'reset_time':resetTime, 'zone':zone, 'actuator_type':actuType, 'set_value':setVal, 'reset_value':resetVal, 'original_value':origVal})
+			self.logColl.store_dataframe(logDF)
 			
 	def reset_seq(self, seq):
 		for row in seq.iterrows():
-			tp = row[1]['timestamp']
+			resetTime = row[1]['reset_time']
 			zone = row[1]['zone']
 			resetVal = row[1]['reset_value']
 			actuType = row[1]['actuator_type']
 			#TODO: How should I reset the value?!!!!!!!!!!
+			actuator = self.actuDict[(zone,actuType)]
+			actuator.set_value(resetVal, resetTime)
 
 
 	def top_dynamic_control(self):
@@ -182,7 +202,7 @@ class Runtime:
 			currTime = self.now()
 			futureCommands = self.load_future_seq(dummyBeginTime, currTime+timedelta(controlInterval))
 			self.issue_seq(futureCommands)
-			resetCommands = self.load_reset_seq
+			resetCommands = self.load_reset_seq(currTime)
 			self.reset_seq(resetCommands)
 			#TODO From here
 			time.sleep(controlInterval)
@@ -194,19 +214,21 @@ class Runtime:
 
 	def top(self):
 		print '=============Begin of Quiver============='
-		controlT = threading.Thread(target=self.top_dynamic_control)
-		controlT.daemon = True
-		uxT = threading.Thread(target=self.top_ux)
-		uxT.daemon = True
-		ntpT = threading.Thread(target=self.top_ntp)
-		ntpT.daemon = True
-		controlT.start()
-		uxT.start()
-		ntpT.start()
-		while(1):
-			pass
+		try:
+			controlT = threading.Thread(target=self.top_dynamic_control)
+			controlT.daemon = True
+			uxT = threading.Thread(target=self.top_ux)
+			uxT.daemon = True
+			ntpT = threading.Thread(target=self.top_ntp)
+			ntpT.daemon = True
+			controlT.start()
+			uxT.start()
+			ntpT.start()
+			while(1):
+				pass
 #		uxT.join()
 #		controlT.join()
 #		ntpT.join()
-		self.rollback_to_genie_setting()
-		print '==============End of Quiver=============='
+		except:
+			self.rollback_to_original_setting()
+			print '==============End of Quiver=============='

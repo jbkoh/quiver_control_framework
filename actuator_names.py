@@ -1,5 +1,6 @@
 class ActuatorNames:
 	commonSetpoint = 'Common Setpoint'
+	occupiedCommand = 'Occupied Command'
 	nameList = list()
 	
 	def __init__(self):

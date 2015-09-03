@@ -31,7 +31,16 @@ class CommonSetpoint(Actuator):
 		self.bdm = bdWrapper()
 		self.template = self.actuNames.commonSetpoint
 
-	def set_value(self, tp, val):
+	def set_value(self, val, tp): # This is dummy for test
+		super(CommonSetpoint, self).set_value(tp, val)
+		if inputType.validate(self,val):
+			pass
+		else:
+			print "Failed to validate a value of " + zone + '\'s Common Setpoint to ' + str(givenVal)
+	def reset_value(self,val,tp): # This is dummy for test
+		super(CommonSetpoint, self).reset_value()
+
+	def set_value_active(self, val, tp):
 		super(CommonSetpoint, self).set_value(tp, val)
 # ts(list of dict) -> 
 		if inputType.validate(self, val):
@@ -42,13 +51,13 @@ class CommonSetpoint(Actuator):
 			print "Failed to validate a value of " + zone + '\'s Common Setpoint to ' + str(givenVal)
 
 	def get_value(self, beginTime, endTime):
-		print "TODO: Implement Get Value"
-		pass
-
-	def reset_value(self):
+		return self.bdm.get_zone_sensor_ts(self.zone, self.template, self.sensorType, beginTime, endTime)
+e
+	def reset_value_active(self, val, tp):
 		super(CommonSetpoint, self).reset_value()
-		print "TODO: Implement Reset Value"
-		pass
+		context = {'room':self.zone, 'template':self.template}
+		uuid = self.bdm.get_sensor_uuids(context)[0]
+		self.bdm.set_sensor(uuid, self.sensorType, tp, val)
 	
 	#TODO: Do I need this?
 	def set_reset_value(self):
