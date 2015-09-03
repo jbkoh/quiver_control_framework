@@ -25,7 +25,7 @@ class CommonSetpoint(Actuator):
 	actuNames = ActuatorNames()
 
 	def __init__ (self, minVal, maxVal, zone):
-		super(CommonSetpoint, self).__init__(timedelta(minutes=30))
+		super(CommonSetpoint, self).__init__(timedelta(minutes=1))
 		self.inputType = master_actuator.TempType(minVal, maxVal)
 		self.zone = zone
 		self.bdm = bdWrapper()
@@ -33,17 +33,18 @@ class CommonSetpoint(Actuator):
 
 	def set_value(self, val, tp): # This is dummy for test
 		super(CommonSetpoint, self).set_value(tp, val)
-		if inputType.validate(self,val):
+		if self.inputType.validate(val):
 			pass
 		else:
-			print "Failed to validate a value of " + zone + '\'s Common Setpoint to ' + str(givenVal)
+			print "Failed to validate a value of " + self.zone + '\'s Common Setpoint to ' + str(val)
+
 	def reset_value(self,val,tp): # This is dummy for test
 		super(CommonSetpoint, self).reset_value()
 
 	def set_value_active(self, val, tp):
 		super(CommonSetpoint, self).set_value(tp, val)
 # ts(list of dict) -> 
-		if inputType.validate(self, val):
+		if self.inputType.validate(val):
 			context = {'room':self.zone, 'template':self.template}
 			uuid = self.bdm.get_sensor_uuids(context)[0]
 			self.bdm.set_sensor(uuid, self.sensorType, tp, val)
@@ -52,7 +53,7 @@ class CommonSetpoint(Actuator):
 
 	def get_value(self, beginTime, endTime):
 		return self.bdm.get_zone_sensor_ts(self.zone, self.template, self.sensorType, beginTime, endTime)
-e
+
 	def reset_value_active(self, val, tp):
 		super(CommonSetpoint, self).reset_value()
 		context = {'room':self.zone, 'template':self.template}
@@ -62,11 +63,3 @@ e
 	#TODO: Do I need this?
 	def set_reset_value(self):
 		pass
-		
-
-	def check_dependency(self, actuType):
-# actuType(str) -> dependent?(boolean)
-		if actuType in self.dependentList:
-			return True
-		else:
-			return False

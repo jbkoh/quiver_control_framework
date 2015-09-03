@@ -21,7 +21,7 @@ class CollectionWrapper:
 		self.lock.acquire()
 		dataDict = data.to_dict('records')
 		self.collection.insert_many(dataDict)
-		self.collection.create_index([('timestamp',pymongo.ASCENDING),('zone',pymongo.ASCENDING)])
+#		self.collection.create_index([('timestamp',pymongo.ASCENDING),('zone',pymongo.ASCENDING)])
 		self.lock.release()
 
 	def load_dataframe(self, query):
@@ -38,7 +38,7 @@ class CollectionWrapper:
 		return df
 
 	def remove_all(self):
-		self.lock.acqure()
+		self.lock.acquire()
 		self.collection.remove()
 		self.lock.release()
 

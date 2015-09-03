@@ -39,6 +39,7 @@ class Runtime:
 		db = client.quiverdb
 		self.futureCommColl = CollectionWrapper('command_sequence')
 		self.resetColl = CollectionWrapper('reset_queue')
+		self.logColl = CollectionWrapper('log')
 
 	def update_offset(self):
 		ntpRequest = self.ntpClient.request(self.ntpURL)
@@ -57,20 +58,21 @@ class Runtime:
 				oneActu = metaactuators.make_actuator(zone,actuatorType)
 				if oneActu:
 					self.actuDict[(zone, actuatorType)] = oneActu
-		seqList['timestamp'] = pd.to_datetime(seqList['timestamp'])
+		seqList['set_time'] = pd.to_datetime(seqList['set_time'])
+		seqList['reset_time'] = pd.to_datetime(seqList['reset_time'])
 		return seqList
 	
 	# command(pd.DataFrame) -> X
-	def store_futureseq(self, seq):
+	def store_future_seq(self, seq):
 		self.futureCommColl.store_dataframe(seq)
 
 	def load_future_seq(self, beginTime, endTime):
-		query = {'$and':[{'timestamp':{'$lte':endTime}}, {'timestamp':{'$gte':beginTime}}]}
-		futureSeq = self.futureCommColl.load_dataframe(query)
+		query = {'$and':[{'set_time':{'$lte':endTime}}, {'set_time':{'$gte':beginTime}}]}
+		futureSeq = self.futureCommColl.pop_dataframe(query)
 		return futureSeq
 
 	def load_reset_seq(self, endTime):
-		query = {'timestamp':{'$lte':endTime}}
+		query = {'reset_time':{'$lte':endTime}}
 		futureSeq = self.resetColl.pop_dataframe(query)
 		return futureSeq
 
@@ -92,6 +94,7 @@ class Runtime:
 			actuator = self.actuDict[(zone,actuType)]
 			actuator.reset_value(resetVal, currTime)
 		self.futureCommColl.remove_all()
+		self.resetColl.remove_all()
 
 	def validate_command_seq_freq(self,seq):
 # seq(pd.DataFrame) -> valid?(boolean)
@@ -101,8 +104,11 @@ class Runtime:
 			actuType = row[1]['actuator_type']
 			actuator  = self.actuDict[(zone, actuType)]
 			minLatency = actuator.minLatency
-			tp = row[1]['timestamp']
-			inrangeRows = np.bitwise_and(seq['timestamp']<tp+minLatency, seq['timestamp']>tp-minLatency)
+			tp = row[1]['set_time']
+			inrangeRows = np.bitwise_and(seq['set_time']<tp+minLatency, seq['set_time']>tp-minLatency)
+			inrangeRows = np.bitwise_and(inrangeRows, seq['zone']==zone)
+			inrangeRows = np.bitwise_and(inrangeRows, seq['actuator_type']==actuType)
+			inrangeRows[row[0]] = False
 			inrangeRows = seq.iloc[inrangeRows.values.tolist()]
 			for inrangeRow in inrangeRows.iterrows():
 				if inrangeRow[1]['zone']==zone and inrangeRow[1]['actuator_type']==actuType:
@@ -118,8 +124,8 @@ class Runtime:
 			actuType = row[1]['actuator_type']
 			actuator  = self.actuDict[(zone, actuType)]
 			minLatency = actuator.minLatency
-			tp = row[1]['timestamp']
-			inrangeRowsIdx = np.bitwise_and(seq['timestamp']<tp, seq['timestamp']>=tp-minExpLatency)
+			tp = row[1]['set_time']
+			inrangeRowsIdx = np.bitwise_and(seq['set_time']<tp, seq['set_time']>=tp-minExpLatency)
 			inrangeRows = seq.iloc[inrangeRowsIdx.values.tolist()]
 			for inrangeRow in inrangeRows.iterrows():
 				if inrangeRow[1]['zone']==zone and actuator.check_dependency(inrangeRow[1]['actuator_type']):
@@ -141,7 +147,7 @@ class Runtime:
 				newFilename = shellCommand
 				newSeq = self.read_seqfile(newFilename)
 				if self.validate_command_seq(newSeq):
-					self.store_futureseq(newSeq)
+					self.store_future_seq(newSeq)
 					print "Input commands are successfully stored"
 				else:
 					print "Input commands are not valld"
@@ -156,7 +162,7 @@ class Runtime:
 #TODO: Think about how to handle errors
 	def issue_seq(self, seq):
 		for row in seq.iterrows():
-			tp = row[1]['timestamp']
+			tp = row[1]['set_time']
 			zone = row[1]['zone']
 			setVal = row[1]['value']
 			resetTime = row[1]['reset_time']
@@ -167,32 +173,32 @@ class Runtime:
 			print origVal
 			if actuType==self.actuNames.commonSetpoint or actuType==self.actuNames.occupiedCommand:
 				if actuator.check_control_flag():
-					query = {'$and':[{'timestamp':{'$lte':now}}, {'zone':zone},{'actuator_type':actuType}]}
-					resetVal = logColl.load_dataframe(query).tail(1)
+					query = {'$and':[{'set_time':{'$lte':now}}, {'zone':zone},{'actuator_type':actuType}]}
+					resetVal = self.logColl.load_dataframe(query).tail(1)
 					resetVal = resetVal['reset_value']
 					print resetVal
 				else:
 					resetVal = origVal
 			else:
 				resetVal = self.relinquishVal
+			print "resetVal: ", resetVal
 
-			resetVal = None #TODO: Temporal setup. should be defined
 			actuator.set_value(setVal, tp) #TODO: This should not work in test stage
-			resetDF = pd.DataFrame({'reset_time':resetTime,'zone':zone,'actuator_type':actuType, 'reset_value':resetVal, 'actuator_type':actuType})
+			resetDF = pd.DataFrame(data={'reset_time':resetTime,'zone':zone,'actuator_type':actuType, 'reset_value':resetVal, 'actuator_type':actuType}, index=[0])
 			self.resetColl.store_dataframe(resetDF)
-			logDF = pd.DataFrame({'set_time':self.now(), 'reset_time':resetTime, 'zone':zone, 'actuator_type':actuType, 'set_value':setVal, 'reset_value':resetVal, 'original_value':origVal})
+			logDF = pd.DataFrame(data={'set_time':self.now(), 'reset_time':resetTime, 'zone':zone, 'actuator_type':actuType, 'set_value':setVal, 'reset_value':resetVal, 'original_value':origVal},index=[0])
 			self.logColl.store_dataframe(logDF)
 			
 	def reset_seq(self, seq):
 		for row in seq.iterrows():
+			print row
 			resetTime = row[1]['reset_time']
 			zone = row[1]['zone']
 			resetVal = row[1]['reset_value']
 			actuType = row[1]['actuator_type']
 			#TODO: How should I reset the value?!!!!!!!!!!
 			actuator = self.actuDict[(zone,actuType)]
-			actuator.set_value(resetVal, resetTime)
-
+			actuator.reset_value(resetVal, resetTime)
 
 	def top_dynamic_control(self):
 		dummyBeginTime = datetime(2000,1,1)
@@ -200,7 +206,8 @@ class Runtime:
 		while(True):
 			#print "begin controlled"
 			currTime = self.now()
-			futureCommands = self.load_future_seq(dummyBeginTime, currTime+timedelta(controlInterval))
+			print currTime
+			futureCommands = self.load_future_seq(dummyBeginTime, currTime+timedelta(seconds=controlInterval))
 			self.issue_seq(futureCommands)
 			resetCommands = self.load_reset_seq(currTime)
 			self.reset_seq(resetCommands)

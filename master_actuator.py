@@ -26,7 +26,7 @@ class TempType():
 		self.maxVal = maxVal
 
 	def validate(self, given):
-		if given <=maxVal and given>=minVal:
+		if given <=self.maxVal and given>=self.minVal:
 			return True
 		else:
 			return False
@@ -59,6 +59,12 @@ class Actuator:
 		self.controlFlag = False
 	
 	def check_control_flag(self):
-		return controlFlag
+		return self.controlFlag
+
+	def check_dependency(self, actuType):
+		if actuType in self.dependentList:
+			return True
+		else:
+			return False
 
 	

@@ -79,7 +79,7 @@ class bdWrapper:
 	def get_zone_sensor_ts(self, zone, template, sensorType, beginTime, endTime):
 # zone(string), template(string), sensorType(string), beginTime(datetime), endTime(datetime) -> ts(pd.Series)
 # Note: This is a wrapper for easy use of get sensor time series
-		context = {'room':'rm-'+zone, 'template':template}
+		context = {'room':zone, 'template':template}
 		try:
 			uuids = self.get_sensor_uuids(context)
 			if len(uuids)>1:
