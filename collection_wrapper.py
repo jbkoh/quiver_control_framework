@@ -37,8 +37,16 @@ class CollectionWrapper:
 		self.lock.release()
 		return df
 
+	def remove_dataframe(self,query):
+		self.lock.acquire()
+		self.collection.remove(query)
+		self.lock.release()
+
 	def remove_all(self):
 		self.lock.acquire()
 		self.collection.remove()
 		self.lock.release()
+	
+	def get_size(self):
+		return self.collection.find({}).count()
 

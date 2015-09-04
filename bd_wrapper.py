@@ -17,7 +17,7 @@ import operator
 #Example of time init
 # self.pst.localize(offTime, is_dst=True)
 
-class bdWrapper:
+class BDWrapper:
 
 	bdDS = None
 	pst = timezone('US/Pacific')
@@ -35,6 +35,17 @@ class bdWrapper:
 			uuids = list()
 			for sensor in resp['sensors']:
 				uuids.append(sensor['uuid'])
+			return uuids
+		except BDError as e:
+			print e
+			return []
+
+	def get_sensor_names(self, context):
+		try:
+			resp = self.bdDS.list_sensors(context)
+			uuids = list()
+			for sensor in resp['sensors']:
+				uuids.append(sensor['source_name'])
 			return uuids
 		except BDError as e:
 			print e

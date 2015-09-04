@@ -5,6 +5,6 @@ import pdb
 runt = Runtime()
 
 if sys.argv[1] == '1':
-	pdb.run("runt.top()")
+	pdb.run("runt.top('commands/test.xlsx')")
 else:
-	runt.top()
+	runt.top('commands/test.xlsx')

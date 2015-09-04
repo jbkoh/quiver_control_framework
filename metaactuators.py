@@ -1,6 +1,6 @@
 import master_actuator
 from master_actuator import Actuator 
-from bd_wrapper import bdWrapper
+from bd_wrapper import BDWrapper
 from actuator_names import ActuatorNames
 
 from datetime import datetime, timedelta
@@ -9,10 +9,10 @@ from datetime import datetime, timedelta
 #TODO: All the types of actuators classes should be implemented here with the super class, Actuator.
 
 
-def make_actuator(zone, actuType):
+def make_actuator(uuid, name, zone=None, actuType=None):
 	actuNames = ActuatorNames()
 	if actuType==actuNames.commonSetpoint:
-		return CommonSetpoint(66,74,zone)
+		return CommonSetpoint(name, uuid, 66,74,zone)
 	else:
 		print "Failed to make an actuator: incorrect type name, " + actuType
 		return None
@@ -24,11 +24,13 @@ class CommonSetpoint(Actuator):
 	template = None
 	actuNames = ActuatorNames()
 
-	def __init__ (self, minVal, maxVal, zone):
+	def __init__ (self, name, uuid, minVal, maxVal, zone):
+		self.name = name
+		self.uuid = uuid
 		super(CommonSetpoint, self).__init__(timedelta(minutes=1))
 		self.inputType = master_actuator.TempType(minVal, maxVal)
 		self.zone = zone
-		self.bdm = bdWrapper()
+		self.bdm = BDWrapper()
 		self.template = self.actuNames.commonSetpoint
 
 	def set_value(self, val, tp): # This is dummy for test

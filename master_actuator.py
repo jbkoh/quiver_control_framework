@@ -34,12 +34,13 @@ class TempType():
 class Actuator:
 	__metaclass__ = ABCMeta
 	minLatency = None # 0 minimum
-
 	inputType = None # should be selected among above type classes
 	lowerActuators = list() 
 	higherActuators = list()
 	dependentList = list()
 	controlFlag = False
+	uuid = None
+	name = None
 
 	def __init__(self, minLatency):
 # minLatency(datetime) ->
@@ -66,5 +67,7 @@ class Actuator:
 			return True
 		else:
 			return False
+	def validate_input(self, given):
+		return self.inputType.validate(given)
 
 	
