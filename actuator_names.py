@@ -1,6 +1,7 @@
 class ActuatorNames:
 	commonSetpoint = 'Common Setpoint'
 	occupiedCommand = 'Occupied Command'
+	actualCoolingSetpoint = 'Actual Cooling Setpoint'
 	nameList = list()
 	
 	def __init__(self):

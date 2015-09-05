@@ -1,5 +1,6 @@
 from enum import Enum
 from abc import ABCMeta, abstractmethod
+from bd_wrapper import BDWrapper
 
 
 # default occupied command type
@@ -41,10 +42,12 @@ class Actuator:
 	controlFlag = False
 	uuid = None
 	name = None
+	bdm = None
 
 	def __init__(self, minLatency):
 # minLatency(datetime) ->
 		self.minLatency = minLatency
+		self.bdm = BDWrapper()
 
 	@abstractmethod
 	def set_value(self, tp, val):
