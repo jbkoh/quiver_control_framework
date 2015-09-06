@@ -9,13 +9,15 @@ from bd_wrapper import BDWrapper
 #	standby = 2
 #	occupied = 3
 #
-class DefaultType():
+class DefaultType(object):
 	minVal = None
 	maxVal = None
 	hardMinVal = None
 	hardMaxVal = None
 
-	def __init__(self, minVal, maxVal):
+	def __init__(self, hardMinVal, hardMaxVal, minVal, maxVal):
+		self.hardMinVal = hardMinVal
+		self.hardMaxVal = hardMaxVal
 		# TODO: Raise error here!!!!
 		if minVal<self.hardMinVal:
 			print "min value is not valid in initialization"
@@ -44,79 +46,45 @@ class OcType(DefaultType):
 		else:
 			return False
 
-#class DamperPosType():
-#
-#	def __init__(self, 
-
-class FlowType():
-	minVal = None
-	maxVal = None
-	hardMinVal = 0
-	hardMaxVal = 3000 #TODO: Is this correct?
+class DamperPosType(DefaultType):
 	def __init__(self, minVal, maxVal):
-		# TODO: Raise error here!!!!
-		if minVal<self.hardMinVal:
-			print "min value is not valid in initialization"
-#			raise Error
-		elif maxVal > self.hardMaxVal:
-			print "max value is not valid in initialization"
-#			raise Error
-		self.minVal = minVal
-		self.maxVal = maxVal
+		super(FlowType, self).__init__(-3,3,minVal,maxVal)
+		#TODO Is hardMaxVal correct for damperPos type?
 
 	def validate(self, given):
-		if given <=self.maxVal and given>=self.minVal:
-			return True
-		else:
-			return False
+		super(FlowType,self).validate(given)
 
-class TempType():
+class FlowType(DefaultType):
 	minVal = None
 	maxVal = None
-	hardMinVal = 0
-	hardMaxVal = 100
-
 	def __init__(self, minVal, maxVal):
-		# TODO: Raise error here!!!!
-		if minVal<self.hardMinVal:
-			print "min value is not valid in initialization"
-#			raise Error
-		elif maxVal > self.hardMaxVal:
-			print "max value is not valid in initialization"
-#			raise Error
-		self.minVal = minVal
-		self.maxVal = maxVal
+		super(FlowType, self).__init__(0,3000,minVal,maxVal)
+		#TODO Is hardMaxVal correct for flow type?
 
 	def validate(self, given):
-		if given <=self.maxVal and given>=self.minVal:
-			return True
-		else:
-			return False
+		super(FlowType,self).validate(given)
 
-class PercentType():
+class TempType(DefaultType):
 	minVal = None
 	maxVal = None
-	hardMinVal = 0
-	hardMaxVal = 100
+	def __init__(self, minVal, maxVal):
+		super(FlowType, self).__init__(50,90,minVal,maxVal)
+		#TODO Is hardMaxVal correct for temp type?
+
+	def validate(self, given):
+		super(FlowType,self).validate(given)
+
+class PercentType(DefaultType):
+	minVal = None
+	maxVal = None
+	def __init__(self, minVal, maxVal):
+		super(FlowType, self).__init__(0,100,minVal,maxVal)
+
+	def validate(self, given):
+		super(FlowType,self).validate(given)
 	
-	def __init__(self, minVal, maxVal):
-		# TODO: Raise error here!!!!
-		if minVal<self.hardMinVal:
-			print "min value is not valid in initialization"
-#			raise Error
-		elif maxVal > self.hardMaxVal:
-			print "max value is not valid in initialization"
-#			raise Error
-		self.minVal = minVal
-		self.maxVal = maxVal
 
-	def validate(self, given):
-		if given <=self.maxVal and given>=self.minVal:
-			return True
-		else:
-			return False
-
-class Actuator:
+class Actuator(object):
 	__metaclass__ = ABCMeta
 	minLatency = None # 0 minimum
 	inputType = None # should be selected among above type classes

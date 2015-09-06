@@ -182,6 +182,8 @@ class HeatingCommand(Actuator):
 	def get_value(self, beginTime, endTime):
 		super(HeatingCommand, self).get_value(beginTime, endTime)
 
+actuNames = ActuatorNames()
+
 class ActualSupplyFlowSP(Actuator):
 	zone = None
 	template = None
@@ -206,4 +208,11 @@ class ActualSupplyFlowSP(Actuator):
 		super(ActualSupplyFlowSP, self).get_value(beginTime, endTime)
 
 class DamperCommand(Actuator):
-	pass
+	zone = None
+	template = None
+	
+	def __init__(self, name, uuid, minVal, maxVal, zone):
+		self.name = name
+		self.uuid = uuid
+		super(DamperCommand, self).__init__(timedelta(minutes=1))
+		self.inputType = master_actuator.DamperType
