@@ -1,5 +1,8 @@
 import master_actuator
+reload(master_actuator)
 from master_actuator import Actuator 
+import actuator_names
+reload(actuator_names)
 from actuator_names import ActuatorNames
 
 from datetime import datetime, timedelta
@@ -18,7 +21,6 @@ def make_actuator(uuid, name, zone=None, actuType=None):
 
 class CommonSetpoint(Actuator):
 	zone = None
-	sensorType = 'PresentValue'
 	template = None
 	actuNames = ActuatorNames()
 
@@ -30,36 +32,27 @@ class CommonSetpoint(Actuator):
 		self.inputType = master_actuator.TempType(minVal, maxVal)
 		self.zone = zone
 		self.template = self.actuNames.commonSetpoint
+		self.sensorType = 'PresentValue'
 
-	def set_value(self, val, tp): # This is dummy for test
-		super(CommonSetpoint, self).set_value(tp, val)
+	def set_value_void(self, val, tp): # This is dummy for test
+		super(CommonSetpoint, self).set_value(val, tp)
 		if self.inputType.validate(val):
 			pass
 		else:
 			print "Failed to validate a value of " + self.zone + '\'s Common Setpoint to ' + str(val)
 
-	def reset_value(self,val,tp): # This is dummy for test
+	def reset_value_void(self,val,tp): # This is dummy for test
 		super(CommonSetpoint, self).reset_value()
 
-	def set_value_active(self, val, tp):
-		super(CommonSetpoint, self).set_value(tp, val)
-# ts(list of dict) -> 
-		if self.inputType.validate(val):
-			context = {'room':self.zone, 'template':self.template}
-			uuid = self.bdm.get_sensor_uuids(context)[0]
-			self.bdm.set_sensor(uuid, self.sensorType, tp, val)
-		else:
-			print "Failed to validate a value of " + zone + '\'s Common Setpoint to ' + str(givenVal)
-
+	def set_value(self, val, tp):
+		super(CommonSetpoint, self).set_value(val, tp)
+	
 	def get_value(self, beginTime, endTime):
 #		return self.bdm.get_zone_sensor_ts(self.zone, self.template, self.sensorType, beginTime, endTime)
 		return self.bdm.get_sensor_ts(self.uuid, self.sensorType, beginTime, endTime)
 
-	def reset_value_active(self, val, tp):
-		super(CommonSetpoint, self).reset_value()
-		context = {'room':self.zone, 'template':self.template}
-		uuid = self.bdm.get_sensor_uuids(context)[0]
-		self.bdm.set_sensor(uuid, self.sensorType, tp, val)
+	def reset_value(self, val, tp):
+		super(CommonSetpoint, self).reset_value(val, tp)
 	
 	#TODO: Do I need this?
 	def set_reset_value(self):
@@ -67,7 +60,6 @@ class CommonSetpoint(Actuator):
 
 class ActualCoolingSetpoint(Actuator):
 	zone = None
-	sensorType = 'PresentValue'
 	template = None
 	actuNames = ActuatorNames()
 
@@ -79,37 +71,139 @@ class ActualCoolingSetpoint(Actuator):
 		self.inputType = master_actuator.TempType(minVal, maxVal)
 		self.zone = zone
 		self.template = self.actuNames.actualCoolingSetpoint
+		self.sensorType = 'PresentValue'
 
-	def set_value(self, val, tp): # This is dummy for test
-		super(ActualCoolingSetpoint, self).set_value(tp, val)
+	def set_value_void(self, val, tp): # This is dummy for test
+		super(ActualCoolingSetpoint, self).set_value(val, tp)
 		if self.inputType.validate(val):
 			pass
 		else:
 			print "Failed to validate a value of " + self.zone + '\'s Common Setpoint to ' + str(val)
 
-	def reset_value(self,val,tp): # This is dummy for test
+	def reset_value_void(self,val,tp): # This is dummy for test
 		super(ActualCoolingSetpoint, self).reset_value()
 
-	def set_value_active(self, val, tp):
-		super(ActualCoolingSetpoint, self).set_value(tp, val)
-# ts(list of dict) -> 
-		if self.inputType.validate(val):
-			context = {'room':self.zone, 'template':self.template}
-			uuid = self.bdm.get_sensor_uuids(context)[0]
-			self.bdm.set_sensor(uuid, self.sensorType, tp, val)
-		else:
-			print "Failed to validate a value of " + zone + '\'s Common Setpoint to ' + str(givenVal)
+	def set_value(self, val, tp):
+		super(ActualCoolingSetpoint, self).set_value(val, tp)
 
 	def get_value(self, beginTime, endTime):
 #		return self.bdm.get_zone_sensor_ts(self.zone, self.template, self.sensorType, beginTime, endTime)
 		return self.bdm.get_sensor_ts(self.uuid, self.sensorType, beginTime, endTime)
 
-	def reset_value_active(self, val, tp):
-		super(ActualCoolingSetpoint, self).reset_value()
-		context = {'room':self.zone, 'template':self.template}
-		uuid = self.bdm.get_sensor_uuids(context)[0]
-		self.bdm.set_sensor(uuid, self.sensorType, tp, val)
+	def reset_value(self, val, tp):
+		super(ActualCoolingSetpoint, self).reset_value(val, tp)
 	
 	#TODO: Do I need this?
 	def set_reset_value(self):
 		pass
+
+class OccupiedCommand(Actuator):
+	zone = None
+	template = None
+	actuNames = ActuatorNames()
+
+#TODO: Is it okay to set minVal and maxVal arbitrarily outside this class?
+	def __init__ (self, name, uuid, zone):
+		self.name = name
+		self.uuid = uuid
+		super(OccupiedCommand, self).__init__(timedelta(minutes=2))
+		self.inputType = master_actuator.OcType()
+		self.zone = zone
+		self.template = self.actuNames.occupiedCommand
+		self.sensorType = 'PresentValue'
+
+	def set_value_void(self, val, tp): # This is dummy for test
+		super(OccupiedCommand, self).set_value(val, tp)
+		if self.inputType.validate(val):
+			pass
+		else:
+			print "Failed to validate a value of " + self.zone + '\'s Common Setpoint to ' + str(val)
+
+	def reset_value_void(self,val,tp): # This is dummy for test
+		super(OccupiedCommand, self).reset_value(val, tp)
+
+	def set_value(self, val, tp):
+		super(OccupiedCommand, self).set_value(val, tp)
+
+	def get_value(self, beginTime, endTime):
+#		return self.bdm.get_zone_sensor_ts(self.zone, self.template, self.sensorType, beginTime, endTime)
+		return self.bdm.get_sensor_ts(self.uuid, self.sensorType, beginTime, endTime)
+
+	def reset_value(self, val, tp):
+		super(OccupiedCommand, self).reset_value(val,tp)
+	
+	#TODO: Do I need this?
+	def set_reset_value(self):
+		pass
+
+class CoolingCommand(Actuator):
+	zone = None
+	template = None
+	actuNames = ActuatorNames()
+
+	def __init__(self, name, uuid, minVal, maxVal, zone):
+		self.name = name
+		self.uuid = uuid
+		super(CoolingCommand, self).__init__(timedelta(minutes=5))
+		self.inputType = master_actuator.PercentType(minVal, maxVal)
+		self.zone = zone
+		self.template = self.actuNames.coolingCommand
+		self.sensorType = 'PresentValue'
+
+	def set_value(self, val, tp):
+		super(CoolingCommand, self).set_value(val, tp)
+	
+	def reset_value(self, val, tp):
+		super(CoolingCommand, self).reset_value(val, tp)
+	
+	def get_value(self, beginTime, endTime):
+		super(CoolingCommand, self).get_value(beginTime, endTime)
+
+class HeatingCommand(Actuator):
+	zone = None
+	template = None
+	actuNames = ActuatorNames()
+
+	def __init__(self, name, uuid, minVal, maxVal, zone):
+		self.name = name
+		self.uuid = uuid
+		super(HeatingCommand, self).__init__(timedelta(minutes=5))
+		self.inputType = master_actuator.PercentType(minVal, maxVal)
+		self.zone = zone
+		self.template = self.actuNames.heatingCommand
+		self.sensorType = 'PresentValue'
+
+	def set_value(self, val, tp):
+		super(HeatingCommand, self).set_value(val, tp)
+	
+	def reset_value(self, val, tp):
+		super(HeatingCommand, self).reset_value(val, tp)
+	
+	def get_value(self, beginTime, endTime):
+		super(HeatingCommand, self).get_value(beginTime, endTime)
+
+class ActualSupplyFlowSP(Actuator):
+	zone = None
+	template = None
+	actuNames = ActuatorNames()
+
+	def __init__(self, name, uuid, minVal, maxVal, zone):
+		self.name = name
+		self.uuid = uuid
+		super(ActualSupplyFlowSP, self).__init__(timedelta(minutes=5))
+		self.inputType = master_actuator.FlowType(minVal, maxVal)
+		self.zone = zone
+		self.template = self.actuNames.actualSupplyFlowSP
+		self.sensorType = 'PresentValue'
+
+	def set_value(self, val, tp):
+		super(ActualSupplyFlowSP, self).set_value(val, tp)
+	
+	def reset_value(self, val, tp):
+		super(ActualSupplyFlowSP, self).reset_value(val, tp)
+	
+	def get_value(self, beginTime, endTime):
+		super(ActualSupplyFlowSP, self).get_value(beginTime, endTime)
+
+class DamperCommand(Actuator):
+	pass

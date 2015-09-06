@@ -9,11 +9,63 @@ from bd_wrapper import BDWrapper
 #	standby = 2
 #	occupied = 3
 #
-class OcType():
+class DefaultType():
+	minVal = None
+	maxVal = None
+	hardMinVal = None
+	hardMaxVal = None
+
+	def __init__(self, minVal, maxVal):
+		# TODO: Raise error here!!!!
+		if minVal<self.hardMinVal:
+			print "min value is not valid in initialization"
+#			raise Error
+		elif maxVal > self.hardMaxVal:
+			print "max value is not valid in initialization"
+#			raise Error
+		self.minVal = minVal
+		self.maxVal = maxVal
+
+	def validate(self, given):
+		if given <=self.maxVal and given>=self.minVal:
+			return True
+		else:
+			return False
+
+class OcType(DefaultType):
 	commands = (1,2,3) #1=unoccupied, 2=standby, 3=occupied
 
+	def __init__(self):
+		pass
+
 	def validate(self,given):
-		if given in commands:
+		if given in self.commands:
+			return True
+		else:
+			return False
+
+#class DamperPosType():
+#
+#	def __init__(self, 
+
+class FlowType():
+	minVal = None
+	maxVal = None
+	hardMinVal = 0
+	hardMaxVal = 3000 #TODO: Is this correct?
+	def __init__(self, minVal, maxVal):
+		# TODO: Raise error here!!!!
+		if minVal<self.hardMinVal:
+			print "min value is not valid in initialization"
+#			raise Error
+		elif maxVal > self.hardMaxVal:
+			print "max value is not valid in initialization"
+#			raise Error
+		self.minVal = minVal
+		self.maxVal = maxVal
+
+	def validate(self, given):
+		if given <=self.maxVal and given>=self.minVal:
 			return True
 		else:
 			return False
@@ -21,8 +73,40 @@ class OcType():
 class TempType():
 	minVal = None
 	maxVal = None
+	hardMinVal = 0
+	hardMaxVal = 100
 
 	def __init__(self, minVal, maxVal):
+		# TODO: Raise error here!!!!
+		if minVal<self.hardMinVal:
+			print "min value is not valid in initialization"
+#			raise Error
+		elif maxVal > self.hardMaxVal:
+			print "max value is not valid in initialization"
+#			raise Error
+		self.minVal = minVal
+		self.maxVal = maxVal
+
+	def validate(self, given):
+		if given <=self.maxVal and given>=self.minVal:
+			return True
+		else:
+			return False
+
+class PercentType():
+	minVal = None
+	maxVal = None
+	hardMinVal = 0
+	hardMaxVal = 100
+	
+	def __init__(self, minVal, maxVal):
+		# TODO: Raise error here!!!!
+		if minVal<self.hardMinVal:
+			print "min value is not valid in initialization"
+#			raise Error
+		elif maxVal > self.hardMaxVal:
+			print "max value is not valid in initialization"
+#			raise Error
 		self.minVal = minVal
 		self.maxVal = maxVal
 
@@ -43,6 +127,7 @@ class Actuator:
 	uuid = None
 	name = None
 	bdm = None
+	sensorType = None
 
 	def __init__(self, minLatency):
 # minLatency(datetime) ->
@@ -50,16 +135,20 @@ class Actuator:
 		self.bdm = BDWrapper()
 
 	@abstractmethod
-	def set_value(self, tp, val):
+	def set_value(self, val, tp):
 		self.controlFlag = True
+		if self.inputType.validate(val):
+			self.bdm.set_sensor(self.uuid, self.sensorType, tp, val)
+		else:
+			print "Failed to validate a value of " + self.zone + '\'s Common Setpoint to ' + str(givenVal)
 
 	@abstractmethod
 	def get_value(self, beginTime, endTime):
-#beginTime(datetime), endTime(datetime) -> pdts
-		pass
+		return self.bdm.get_sensor_ts(self.uuid, self.sensorType, beginTime, endTime)
 
 	@abstractmethod #Should this be abm?
-	def reset_value(self):
+	def reset_value(self, val, tp):
+		self.bdm.set_sensor(self.uuid, self.sensorType, tp, val)
 		self.controlFlag = False
 	
 	def check_control_flag(self):
