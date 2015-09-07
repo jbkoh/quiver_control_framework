@@ -45,7 +45,7 @@ class CommonSetpoint(Actuator):
 		super(CommonSetpoint, self).reset_value()
 
 	def set_value(self, val, tp):
-		super(CommonSetpoint, self).set_value(val, tp)
+		super(CommonSetpoint, self).set_value(val, tp+timedelta(minutes=1))
 	
 	def get_value(self, beginTime, endTime):
 #		return self.bdm.get_zone_sensor_ts(self.zone, self.template, self.sensorType, beginTime, endTime)
@@ -55,8 +55,8 @@ class CommonSetpoint(Actuator):
 		super(CommonSetpoint, self).reset_value(val, tp)
 	
 	#TODO: Do I need this?
-	def set_reset_value(self):
-		pass
+	def set_reset_value(self, resetVal=-1):
+		self.resetVal = resetVal
 
 class ActualCoolingSetpoint(Actuator):
 	zone = None

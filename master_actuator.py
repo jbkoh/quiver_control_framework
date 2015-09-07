@@ -83,12 +83,14 @@ class Actuator(object):
 	inputType = None # should be selected among above type classes
 	lowerActuators = list() 
 	higherActuators = list()
-	dependentList = list()
+	affectingDependencyDict = dict() # values of this dict are each actuator's minLatency
+	affectedDependencyDict = dict() # values of this dict are this actuator's minLatency
 	controlFlag = False
 	uuid = None
 	name = None
 	bdm = None
 	sensorType = None
+	resetVal = None
 
 	def __init__(self, minLatency):
 # minLatency(datetime) ->
@@ -115,11 +117,17 @@ class Actuator(object):
 	def check_control_flag(self):
 		return self.controlFlag
 
-	def check_dependency(self, actuType):
-		if actuType in self.dependentList:
-			return True
+	def get_dependency(self, actuType):
+		if actuType in self.affectingDependencyDict.keys():
+			return self.affectingDependencyDict[actuType]
+		elif actuType in self.affectedDependencyDict.keys():
+			return self.affectedDependencyDict[actuType]
 		else:
-			return False
+			return None
+	
+	def get_longest_dependency(self):
+		return max(max(self.affectedDependencyDict.values),max(self.affectingDependencyDict.values()))
+
 	def validate_input(self, given):
 		return self.inputType.validate(given)
 

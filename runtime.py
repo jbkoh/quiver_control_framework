@@ -217,7 +217,7 @@ class Runtime:
 			loggedRows = self.expLogColl.load_dataframe({'set_time':{'$gte':setTime-actuator.minLatency}})
 			inrangeRows = pd.concat([inrangeRows, resetRows, loggedRows])
 			for inrangeRow in inrangeRows.iterrows():
-				if inrangeRow[1]['zone']==zone and actuator.check_dependency(inrangeRow[1]['actuator_type']):
+				if inrangeRow[1]['zone']==zone and actuator.get_dependency(inrangeRow[1]['actuator_type'])!=None:
 					print baseInvalidMsg + str(row[1]) + ' is dependent on ' + str(inrangeRow[1])
 					return row[1]
 		return pd.DataFrame({})
