@@ -48,41 +48,34 @@ class OcType(DefaultType):
 
 class DamperPosType(DefaultType):
 	def __init__(self, minVal, maxVal):
-		super(FlowType, self).__init__(-3,3,minVal,maxVal)
+		super(DamperPosType, self).__init__(-2,2,minVal,maxVal)
 		#TODO Is hardMaxVal correct for damperPos type?
 
 	def validate(self, given):
-		super(FlowType,self).validate(given)
+		return super(DamperPosType,self).validate(given)
 
 class FlowType(DefaultType):
-	minVal = None
-	maxVal = None
 	def __init__(self, minVal, maxVal):
 		super(FlowType, self).__init__(0,3000,minVal,maxVal)
 		#TODO Is hardMaxVal correct for flow type?
 
 	def validate(self, given):
-		super(FlowType,self).validate(given)
+		return super(FlowType,self).validate(given)
 
 class TempType(DefaultType):
-	minVal = None
-	maxVal = None
 	def __init__(self, minVal, maxVal):
-		super(FlowType, self).__init__(50,90,minVal,maxVal)
+		super(TempType, self).__init__(50,90,minVal,maxVal)
 		#TODO Is hardMaxVal correct for temp type?
 
 	def validate(self, given):
-		super(FlowType,self).validate(given)
+		return super(TempType,self).validate(given)
 
 class PercentType(DefaultType):
-	minVal = None
-	maxVal = None
 	def __init__(self, minVal, maxVal):
-		super(FlowType, self).__init__(0,100,minVal,maxVal)
+		super(PercentType, self).__init__(0,100,minVal,maxVal)
 
 	def validate(self, given):
-		super(FlowType,self).validate(given)
-	
+		return super(PercentType,self).validate(given)
 
 class Actuator(object):
 	__metaclass__ = ABCMeta

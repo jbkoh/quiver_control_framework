@@ -5,6 +5,7 @@ class ActuatorNames:
 	actualSupplyFlowSP = 'Actual Sup Flow SP'
 	heatingCommand = 'Heating Command'
 	damperCommand = 'Damper Command'
+	occupiedCoolingMinimumFlow = 'Occupied Clg Min'
 	nameList = list()
 	
 	def __init__(self):

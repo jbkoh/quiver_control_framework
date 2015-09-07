@@ -215,4 +215,37 @@ class DamperCommand(Actuator):
 		self.name = name
 		self.uuid = uuid
 		super(DamperCommand, self).__init__(timedelta(minutes=1))
-		self.inputType = master_actuator.DamperType
+		self.inputType = master_actuator.DamperPosType(minVal,maxVal)
+		template = actuNames.damperCommand
+		self.zone = zone
+		self.sensorType = 'PresentValue'
+	
+	def set_value(self, val, tp):
+		super(DamperCommand, self).set_value(val, tp)
+	
+	def reset_value(self, val, tp):
+		super(DamperCommand, self).reset_value(val, tp)
+	
+	def get_value(self, beginTime, endTime):
+		super(DamperCommand, self).get_value(beginTime, endTime)
+
+class OccupiedCoolingMinimumFlow(Actuator):
+	zone = None
+	template = None
+	def __init__(self, name, uuid, minVal, maxVal, zone):
+		self.name = name
+		self.uuid = uuid
+		super(OccupiedCoolingMinimumFlow, self).__init__(timedelta(minutes=5))
+		self.inputType = master_actuator.FlowType(0,500)
+		self.zone = zone
+		self.template = actuNames.occupiedCoolingMinimumFlow
+		self.sensorType = 'PresentValue'
+	
+	def set_value(self, val, tp):
+		super(OccupiedCoolingMinimumFlow, self).set_value(val, tp)
+	
+	def reset_value(self, val, tp):
+		super(OccupiedCoolingMinimumFlow, self).reset_value(val, tp)
+	
+	def get_value(self, beginTime, endTime):
+		super(OccupiedCoolingMinimumFlow, self).get_value(beginTime, endTime)
