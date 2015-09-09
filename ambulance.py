@@ -1,6 +1,6 @@
 from actuator_names import ActuatorNames
 import metaactuators
-from collection_wrapper import CollectionWrapper
+from collection_wrapper import *
 
 import pandas as pd
 import numpy as np
@@ -18,11 +18,6 @@ from collection import defaultdict
 import ntplib
 from runtime import Runtime
 
-import socket
-
-serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.connect(('localhost', 62122))
-
 class Ambulance:
 	resetColl = None
 	expLogColl = None
@@ -32,6 +27,7 @@ class Ambulance:
 	timeOffset = None
 	ntpURL = 'ntp.ucsd.edu'
 	runt = Runtime()
+	minResetLatency= 10 # minutes
 
 
 	def __init__(self):
@@ -42,13 +38,12 @@ class Ambulance:
 
 
 	def emergent_rollback(self):
-#		queryAll = {'reset_time':{'$gte':self.dummyBeginTime}}
 		queryAll = {}
 		resetQueue = self.resetColl.pop_data(queryAll)
 		resetQueue = resetQueue.sort(columns='set_time', axis='index')
 		if len(resetQueue)==0:
 			return None
-		resetSequence = defaultdict(list)
+		resetSeq= defaultdict(list)
 
 		# Make actuators to reset and get earliest set time dependent on reset_queue
 		earliestDepTime = self.dummyEndTime
@@ -70,9 +65,33 @@ class Ambulance:
 		
 		# Construct reset sequence (dict of list. dict's key is target time)
 		#TODO: Filter resetQueue by removing redundant reset signals
-		for row in resetQueue.iterrows():
-			uuid = row[1]['uuid']
-			actautor = self.actuDict[uuid]
-			setTime = self.runt.now()
-			for 
-			#TODO: check dependency and put the reset sequence to 
+		now = self.runt.now()
+		while len(resetQueue)>0:
+			currResetList = dict()
+			for row in resetQueue.iterrows():
+				uuid = row[1]['uuid']
+				zone = row[1]['zone']
+				actuator = self.actuDict[uuid]
+				depFlag = False
+				for uuid in actuator.get_dependent_actu_list():
+					if (uuid in logQuery['uuid'][logQuery['reset_time']>=now-actuator.minLatencty]) or (uuid in currResetList):
+						depFlag = True
+						break
+				if not depFlag:
+					currResetList[uuid] = row[1]['reset_value']
+					resetQueue = resetQueue.drop(row[2])
+			now = now + timedelta(minutes=10)
+			resetSeq.append(currResetList)
+
+		# Reset all the sensors registered at reset_queue
+		for currResetList in resetSeq:
+			for uuid, resetVal in currResetList.iteritems():
+				actuator = self.actuDict[uuid]
+				now = self.runt.now()
+				origVal = actuator.get_latest_value(now)
+				expLogRow = ExpLogRow(uuid, actuator.name, now, setVal=actuator.resetVal, origVal=origVal)
+				self.expLogColl.store_row(expLogRow)
+				actuator.reset_value(resetVal)
+			# TODO: I have to acknowledge that the value is reset. However, how can I check if the reset value is -1?? How can I know if the value is reset or just changed?
+			time.sleep(self.minResetLatency)
+

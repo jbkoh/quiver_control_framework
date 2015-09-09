@@ -1,6 +1,7 @@
 from enum import Enum
 from abc import ABCMeta, abstractmethod
 from bd_wrapper import BDWrapper
+from datetime import datetime
 
 
 # default occupied command type
@@ -113,17 +114,27 @@ class Actuator(object):
 	def reset_value(self, val, tp):
 		self.bdm.set_sensor(self.uuid, self.sensorType, tp, val)
 		self.controlFlag = False
+
+	def get_latest_value(self, now):
+		result = self.bdm.get_sensor_ts(self.uuid, self.sensorType, now-timedelta(hours=6))
+		if result ==None:
+			return None
+		else:
+			return result.tail(1).values[0]
 	
 	def check_control_flag(self):
 		return self.controlFlag
 
-	def get_dependency(self, actuType):
-		if actuType in self.affectingDependencyDict.keys():
-			return self.affectingDependencyDict[actuType]
-		elif actuType in self.affectedDependencyDict.keys():
-			return self.affectedDependencyDict[actuType]
+	def get_dependency(self, uuid):
+		if uuid in self.affectingDependencyDict.keys():
+			return self.affectingDependencyDict[uuid]
+		elif uuid in self.affectedDependencyDict.keys():
+			return self.affectedDependencyDict[uuid]
 		else:
 			return None
+	
+	def get_dependent_actu_list(self):
+		return affectingDependencyDict.keys() + affectedDependencyDict.keys()
 	
 	def get_longest_dependency(self):
 		return max(max(self.affectedDependencyDict.values),max(self.affectingDependencyDict.values()))

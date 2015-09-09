@@ -228,7 +228,7 @@ class DamperCommand(Actuator):
 	
 	def get_value(self, beginTime, endTime):
 		super(DamperCommand, self).get_value(beginTime, endTime)
-
+	
 class OccupiedCoolingMinimumFlow(Actuator):
 	zone = None
 	template = None

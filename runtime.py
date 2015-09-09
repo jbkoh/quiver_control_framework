@@ -1,6 +1,6 @@
 from actuator_names import ActuatorNames
 import metaactuators
-from collection_wrapper import CollectionWrapper
+from collection_wrapper import *
 from bd_wrapper import BDWrapper
 
 import pandas as pd
@@ -138,10 +138,6 @@ class Runtime:
 		seqList['set_time'] = pd.to_datetime(seqList['set_time'])
 		seqList['reset_time'] = pd.to_datetime(seqList['reset_time'])
 		return seqList
-	
-	# command(pd.DataFrame) -> X
-	def store_future_seq(self, seq):
-		self.futureCommColl.store_dataframe(seq)
 
 	def load_future_seq(self, beginTime, endTime):
 		query = {'$and':[{'set_time':{'$lte':endTime}}, {'set_time':{'$gte':beginTime}}]}
@@ -266,10 +262,11 @@ class Runtime:
 			#logging.debug('Issued: ' + repr(seq))
 
 			actuator.set_value(setVal, setTime) #TODO: This should not work in test stage
-			resetDF = pd.DataFrame(data={'name':name, 'uuid':uuid, 'set_time':setTime, 'reset_time':resetTime,'zone':zone,'actuator_type':actuType, 'reset_value':resetVal, 'actuator_type':actuType}, index=[0])
-			self.resetColl.store_dataframe(resetDF)
+			resetRow = ResetRow(uuid, name, setTime=setTime, resetTime=resetTime, setVal=setVal, resetVal=resetVal, origVal=origVal)
+			self.resetColl.store_row(resetRow)
 			expLogDF = pd.DataFrame(data={'name':name, 'uuid':uuid, 'set_time':self.now(), 'reset_time':resetTime, 'zone':zone, 'actuator_type':actuType, 'set_value':setVal, 'reset_value':resetVal, 'original_value':origVal},index=[0])
-			self.expLogColl.store_dataframe(expLogDF)
+			expLogRow = ExpLogRow(uuid, name, setTime=setTime, resetTime=resetTime, setVal=setVal, resetVal=resetVal, origVal=origVal)
+			self.expLogColl.store_row(expLogRow)
 
 		# wait for ack from BD (TODO: is it correct to wait for BD to response?)
 		for row in seq.iterrows():
@@ -336,7 +333,7 @@ class Runtime:
 		newSeq = self.read_seqfile(filename)
 		invalidCommand = self.validate_command_seq(newSeq)
 		if invalidCommand.empty:
-			self.store_future_seq(newSeq)
+			self.futureCommColl.store_dataframe(newseq)
 			print "Input commands are successfully stored"
 			return True
 		else:
