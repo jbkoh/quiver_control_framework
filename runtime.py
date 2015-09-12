@@ -18,6 +18,7 @@ import smtplib
 import logging
 import emailauth
 from email.mime.text import MIMEText
+import traceback
 
 #from multiprocessing import Process
 #import threading
@@ -118,6 +119,12 @@ class Runtime:
 	def read_seqfile(self, filename):
 # filename(string, excel) -> seqList(pd.DataFrame)
 		seqList = pd.read_excel(filename)
+		decDatetime = lambda x: datetime.strptime(x, self.inputTimeFormat)
+		seqList['reset_time'] = seqList['reset_time'].map(decDatetime)
+		seqList['set_time'] = seqList['set_time'].map(decDatetime)
+		now = self.now()
+		if True in (seqList['set_time']<now).tolist():
+			raise QRError('some set_time is before now', now)
 		for row in seqList.iterrows():
 			zone = row[1]['zone']
 			actuatorType = row[1]['actuator_type']
@@ -131,23 +138,27 @@ class Runtime:
 				if oneActu:
 					self.actuDict[uuid] = oneActu
 				else:
-					raise QRError('Failed to make an actuator', [uuid, anme])
+					raise QRError('Failed to make an actuator', [uuid, name])
 			actuator = self.actuDict[uuid]
 			if not actuator.validate_input(value):
 				raise QRError('Invald input', [uuid, name, value])
-		seqList['set_time'] = pd.to_datetime(seqList['set_time'])
-		seqList['reset_time'] = pd.to_datetime(seqList['reset_time'])
+			resetTime = row[1]['reset_time']
+			setTime = row[1]['set_time']
+			if resetTime-setTime < actuator.minLatency:
+				raise QRError('Latency between set_time and reset_time is too short', [uuid, name, setTime, resetTime])
+		#seqList['set_time'] = pd.to_datetime(seqList['set_time'])
+		#seqList['reset_time'] = pd.to_datetime(seqList['reset_time'])
 		return seqList
 
 	def load_future_seq(self, beginTime, endTime):
 		query = {'$and':[{'set_time':{'$lte':endTime}}, {'set_time':{'$gte':beginTime}}]}
 		futureSeq = self.futureCommColl.load_dataframe(query)
-		invalidCommand = self.validate_command_seq(futureSeq)
+		invalidCommand = self.dynamic_validate(futureSeq)
 		if invalidCommand.empty:
 			self.futureCommColl.remove_dataframe(query)
 			return futureSeq
 		else:
-			raise QRError(errorType='Invalid command: ', value=invalidCommand)
+			raise QRError(errorType='A command is depedent to currently opearting actuator', value=invalidCommand)
 
 	def load_reset_seq(self, endTime):
 		query = {'reset_time':{'$lte':endTime}}
@@ -176,6 +187,7 @@ class Runtime:
 
 	def validate_command_seq_freq(self,seq):
 # seq(pd.DataFrame) -> valid?(boolean)
+#TODO: This does not consider reset commands. However, it should be considered later
 		baseInvalidMsg = "Test sequence is invalid because "
 		for row in seq.iterrows():
 			zone = row[1]['zone']
@@ -199,7 +211,7 @@ class Runtime:
 	
 	def validate_command_seq_dependency(self, seq, minExpLatency):
 # seq(pd.DataFrame) -> valid?(boolean)
-		baseInvalidMsg = "Test sequence is invalid because "
+		#baseInvalidMsg = "Test sequence is invalid because "
 		for row in seq.iterrows():
 			zone = row[1]['zone']
 			actuType = row[1]['actuator_type']
@@ -207,24 +219,40 @@ class Runtime:
 			actuator  = self.actuDict[uuid]
 			minLatency = actuator.minLatency
 			setTime = row[1]['set_time']
-			inrangeRowsIdx = np.bitwise_and(seq['set_time']<setTime, seq['set_time']>=setTime-minExpLatency)
+			inrangeRowsIdx = np.bitwise_and(seq['set_time']<setTime, seq['set_time']>setTime-minExpLatency)
 			inrangeRows = seq.iloc[inrangeRowsIdx.values.tolist()]
 			resetRows = self.resetColl.load_dataframe({})
-			loggedRows = self.expLogColl.load_dataframe({'set_time':{'$gte':setTime-actuator.minLatency}})
+			loggedRows = self.expLogColl.load_dataframe({'set_time':{'$gte':setTime-minExpLatency}})
 			inrangeRows = pd.concat([inrangeRows, resetRows, loggedRows])
 			for inrangeRow in inrangeRows.iterrows():
 				if inrangeRow[1]['zone']==zone and actuator.get_dependency(inrangeRow[1]['actuator_type'])!=None:
-					print baseInvalidMsg + str(row[1]) + ' is dependent on ' + str(inrangeRow[1])
+		#			print baseInvalidMsg + str(row[1]) + ' is dependent on ' + str(inrangeRow[1])
 					return row[1]
 		return pd.DataFrame({})
 
-	def validate_command_seq(self, seq):
+	def static_validate(self, seq):
 		invalidFreqCommand = self.validate_command_seq_freq(seq)
 		if not invalidFreqCommand.empty:
 			return invalidFreqCommand
-		invalidDepCommand = self.validate_command_seq_dependency(seq, timedelta(minutes=5))
+		invalidDepCommand = self.validate_command_seq_dependency(seq, timedelta(minutes=5)) #TODO: This minExpLatency should be set to 1 hour later
 		if not invalidDepCommand.empty:
 			return invalidDepCommand
+		return pd.DataFrame({})
+
+	def dynamic_validate(self, seq):
+		queryAll = {}
+		resetQueue = self.resetColl.load_dataframe(queryAll)
+		invalidCommand = pd.DataFrame()
+		if resetQueue.empty:
+			return pd.DataFrame({})
+
+		for row in seq.iterrows():
+			uuid = row[1]['zone']
+			actuator = self.actuDict[uuid]
+			if True in (resetQueue['uuid'] in actuator.get_dependent_actu_list()).tolist():
+				#TODO: Fix this!!!
+				return row
+
 		return pd.DataFrame({})
 
 	def now(self):
@@ -232,9 +260,7 @@ class Runtime:
 		currTime = currTime + self.timeOffset
 		return currTime
 
-#TODO: Think about how to handle errors
 	def issue_seq(self, seq):
-		#logging.debug('Start issuing')
 		for row in seq.iterrows():
 			#logging.debug('Try to issue: ' + repr(seq))
 			setTime = row[1]['set_time']
@@ -248,10 +274,11 @@ class Runtime:
 			now = self.now()
 			origVal = actuator.get_value(now-timedelta(hours=1), now).tail(1)[0]
 			print origVal
-			if actuType==self.actuNames.commonSetpoint or actuType==self.actuNames.occupiedCommand:
+			if actuType in [self.actuNames.commonSetpoint, self.actuNames.occupiedCommand]:
 				if actuator.check_control_flag():
-					query = {'$and':[{'set_time':{'$lte':now}}, {'zone':zone},{'actuator_type':actuType}]}
-					resetVal = self.expLogColl.load_dataframe(query).tail(1)
+					query = {'uuid':uuid}
+					resetVal = self.resetColl.load_dataframe(query).tail(1)
+					#TODO: This should become more safe. e.g., what if that is no data in resetColl?
 					resetVal = float(resetVal['reset_value'])
 					print resetVal
 				else:
@@ -259,51 +286,64 @@ class Runtime:
 			else:
 				resetVal = self.relinquishVal
 			print "resetVal: ", resetVal
-			#logging.debug('Issued: ' + repr(seq))
 
+			now = self.now()
 			actuator.set_value(setVal, setTime) #TODO: This should not work in test stage
-			resetRow = ResetRow(uuid, name, setTime=setTime, resetTime=resetTime, setVal=setVal, resetVal=resetVal, origVal=origVal)
+			resetRow = ResetRow(uuid, name, setTime=now, resetTime=resetTime, setVal=setVal, resetVal=resetVal, origVal=origVal,actuType=actuType)
 			self.resetColl.store_row(resetRow)
-			expLogDF = pd.DataFrame(data={'name':name, 'uuid':uuid, 'set_time':self.now(), 'reset_time':resetTime, 'zone':zone, 'actuator_type':actuType, 'set_value':setVal, 'reset_value':resetVal, 'original_value':origVal},index=[0])
-			expLogRow = ExpLogRow(uuid, name, setTime=setTime, resetTime=resetTime, setVal=setVal, resetVal=resetVal, origVal=origVal)
+			expLogRow = ExpLogRow(uuid, name, setTime=now, resetTime=None, setVal=setVal, resetVal=resetVal, origVal=origVal)
+			print expLogRow
 			self.expLogColl.store_row(expLogRow)
 
 		# wait for ack from BD (TODO: is it correct to wait for BD to response?)
-		for row in seq.iterrows():
-			uuid = row[1]['uuid']
-			setVal = row[1]['set_value']
-			if not self.issue_ack(uuid, setVal):
-				raise QRError('A command cannot be set at BACNet', row[1])
-			#logging.debug('Ackknowledged issued command: ' + repr(row[1]))
-
-	
-	def issue_ack(self, uuid, targetVal):
-		actuator = self.actuDict[uuid]
-		validateBeginTime = self.now()
-		while self.now()<=validateBeginTime+self.ackLatency:
-			currT = self.now()
-			currVal = actuator.get_value(currT-timedelta(hours=1),currT).tail(1)[0]
-			if currVal==targetVal:
-				break
-		if currVal==targetVal:
-			return True
+		if self.issue_ack(seq, True).empty:
+			print "Commands are issued"
 		else:
-			return False
+			raise QRError('Commands cannot be set at BACNet', seq)
+
+	def issue_ack(self, seq, setResetFlag):
+		maxWaitTime = self.now() + timedelta(minutes=11)
+		ackInterval = 30 # minutes
+		while self.now()<=maxWaitTime:
+			for row in seq.iterrows():
+				uuid = row[1]['uuid']
+				if setResetFlag:
+					ackVal = row[1]['set_value']
+				else:
+					ackVal = row[1]['reset_value']
+				actuator = self.actuDict[uuid]
+				currT = self.now()
+				currVal = actuator.get_latest_value(self.now())
+				if currVal==ackVal:
+					seq = seq.drop(row[0])
+			if len(seq)==0:
+				return pd.DataFrame({})
+			print "Doing ACK", repr(row[1])
+			time.sleep(ackInterval)
+		if len(seq)==0:
+			return pd.DataFrame({})
+		else:
+			return seq
 			
 	def reset_seq(self, seq):
 		for row in seq.iterrows():
 			#TODO: validate_in_log
 			print row
 			resetTime = row[1]['reset_time']
-			zone = row[1]['zone']
 			resetVal = row[1]['reset_value']
 			actuType = row[1]['actuator_type']
 			uuid = row[1]['uuid']
+			name = row[1]['name']
 			actuator = self.actuDict[uuid]
+			now = self.now()
+			origVal = actuator.get_value(now-timedelta(hours=1), now).tail(1)[0]
 			actuator.reset_value(resetVal, resetTime)
+			expLogRow = ExpLogRow(uuid, name, setTime=None, resetTime=resetTime, setVal=None, resetVal=now, origVal=origVal)
+			print expLogRow
+			self.expLogColl.store_row(expLogRow)
 
-			if not self.issue_ack(uuid, resetVal):
-				raise QRError('A reset command cannot be set at BACNet', row[1])
+		if not self.issue_ack(seq, False).empty:
+			raise QRError('A reset command cannot be set at BACNet', seq)
 
 	def top_dynamic_control(self):
 		controlInterval = 5 # in seconds
@@ -311,14 +351,13 @@ class Runtime:
 			self.top_ntp()
 			currTime = self.now()
 			print currTime
-			futureCommands = self.load_future_seq(self.dummyBeginTime, currTime+timedelta(seconds=controlInterval))
+			futureCommands = self.load_future_seq(self.dummyBeginTime, currTime)
 			print 'future command:'
 			print futureCommands
 			self.issue_seq(futureCommands)
-			print 'reset command'
-			print self.resetColl.load_dataframe({})
 			resetCommands = self.load_reset_seq(currTime)
 			if len(resetCommands)>0:
+				print 'reset command'
 				print resetCommands
 			self.reset_seq(resetCommands)
 			time.sleep(controlInterval)
@@ -331,9 +370,9 @@ class Runtime:
 
 	def top_ux(self,filename):
 		newSeq = self.read_seqfile(filename)
-		invalidCommand = self.validate_command_seq(newSeq)
+		invalidCommand = self.static_validate(newSeq)
 		if invalidCommand.empty:
-			self.futureCommColl.store_dataframe(newseq)
+			self.futureCommColl.store_dataframe(newSeq)
 			print "Input commands are successfully stored"
 			return True
 		else:
@@ -342,9 +381,17 @@ class Runtime:
 	def emergent_rollback(self):
 		queryAll = {'reset_time':{'$gte':self.dummyBeginTime}}
 		self.resetColl.pop_data(queryAll)
-		
+
+	def system_close_common_behavior(self):
+		self.futureCommColl.remove_all()
+
+	def system_refresh(self):
+		self.futureCommColl.remove_all()
+		self.expLogColl.remove_all()
+		self.resetColl.remove_all()
 
 	def top(self, filename):
+		self.system_refresh()
 		print '=============Begin of Quiver============='
 		self.update_time_offset()
 		try:
@@ -355,8 +402,13 @@ class Runtime:
 		except QRError as e:
 			print e
 			self.notify_systemfault()
+			self.system_close_common_behavior()
 			print '==============End of Quiver=============='
 		except KeyboardInterrupt:
+			self.system_close_common_behavior()
+			for frame in traceback.extract_tb(sys.exc_info()[2]):
+				fname,lineno,fn,text = frame
+				print "Error in %s on line %d" % (fname, lineno)
 			print "Normally finished by a user interrupt"
 			print '==============End of Quiver=============='
 #		except Exception, e:

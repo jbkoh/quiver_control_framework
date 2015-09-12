@@ -1,7 +1,7 @@
 from enum import Enum
 from abc import ABCMeta, abstractmethod
 from bd_wrapper import BDWrapper
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 # default occupied command type
@@ -102,6 +102,7 @@ class Actuator(object):
 	def set_value(self, val, tp):
 		self.controlFlag = True
 		if self.inputType.validate(val):
+			pass
 			self.bdm.set_sensor(self.uuid, self.sensorType, tp, val)
 		else:
 			print "Failed to validate a value of " + self.zone + '\'s Common Setpoint to ' + str(givenVal)
@@ -116,8 +117,8 @@ class Actuator(object):
 		self.controlFlag = False
 
 	def get_latest_value(self, now):
-		result = self.bdm.get_sensor_ts(self.uuid, self.sensorType, now-timedelta(hours=6))
-		if result ==None:
+		result = self.bdm.get_sensor_ts(self.uuid, self.sensorType, now-timedelta(hours=6), now)
+		if result.empty:
 			return None
 		else:
 			return result.tail(1).values[0]

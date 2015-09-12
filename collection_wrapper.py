@@ -5,8 +5,9 @@ import pandas as pd
 
 
 class DefaultRow(object):
-	content = dict()
+	content = None
 	def __init__ (self, uuid, name):
+		self.content = dict()
 		self.content['uuid'] = uuid
 		self.content['name'] = name
 
@@ -19,29 +20,30 @@ class ExpLogRow(DefaultRow):
 		self.content['reset_value'] = resetVal
 		self.content['original_value'] = origVal
 	def get_dict(self):
-		return content
+		return self.content
 
 class ResetRow(DefaultRow):
-	def __init__ (self, uuid, name, setTime=None, resetTime=None, setVal=None, resetVal=None, origVal=None):
-		super(ExpLogRow, self).__init__(uuid, name)
+	def __init__ (self, uuid, name, setTime=None, resetTime=None, setVal=None, resetVal=None, origVal=None, actuType=None):
+		super(ResetRow, self).__init__(uuid, name)
 		self.content['set_time'] = setTime
 		self.content['reset_time'] = resetTime
 		self.content['set_value'] = setVal
 		self.content['reset_value'] = resetVal
 		self.content['original_value'] = origVal
+		self.content['actuator_type'] = actuType
 	def get_dict(self):
-		return content
+		return self.content
 
 class SetRow(DefaultRow):
-	def __init__ (self, uuid, name, setTime=None, resetTime=None, setVal=None)
-		super(ExpLogRow, self).__init__(uuid, name)
+	def __init__ (self, uuid, name, setTime=None, resetTime=None, setVal=None):
+		super(SetRow, self).__init__(uuid, name)
 		self.content['set_time'] = setTime
 		self.content['reset_time'] = resetTime
 		self.content['set_value'] = setVal
 		self.content['reset_value'] = resetVal
 		self.content['original_value'] = origVal
 	def get_dict(self):
-		return content
+		return self.content
 
 
 class CollectionWrapper:
@@ -70,7 +72,7 @@ class CollectionWrapper:
 		if isinstance(row, DefaultRow):
 			self.lock.acquire()
 			dataDict = row.get_dict()
-			self.collection.insert_many(dataDict)
+			self.collection.insert_one(dataDict)
 			self.lock.release()
 			return True
 		else:

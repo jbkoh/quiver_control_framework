@@ -34,22 +34,11 @@ class CommonSetpoint(Actuator):
 		self.template = self.actuNames.commonSetpoint
 		self.sensorType = 'PresentValue'
 
-	def set_value_void(self, val, tp): # This is dummy for test
-		super(CommonSetpoint, self).set_value(val, tp)
-		if self.inputType.validate(val):
-			pass
-		else:
-			print "Failed to validate a value of " + self.zone + '\'s Common Setpoint to ' + str(val)
-
-	def reset_value_void(self,val,tp): # This is dummy for test
-		super(CommonSetpoint, self).reset_value()
-
 	def set_value(self, val, tp):
 		super(CommonSetpoint, self).set_value(val, tp+timedelta(minutes=1))
 	
 	def get_value(self, beginTime, endTime):
-#		return self.bdm.get_zone_sensor_ts(self.zone, self.template, self.sensorType, beginTime, endTime)
-		return self.bdm.get_sensor_ts(self.uuid, self.sensorType, beginTime, endTime)
+		return super(CommonSetpoint, self).get_value(beginTime, endTime)
 
 	def reset_value(self, val, tp):
 		super(CommonSetpoint, self).reset_value(val, tp)

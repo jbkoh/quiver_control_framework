@@ -39,7 +39,7 @@ class Ambulance:
 
 	def emergent_rollback(self):
 		queryAll = {}
-		resetQueue = self.resetColl.pop_data(queryAll)
+		resetQueue = self.resetColl.pop_dataframe(queryAll)
 		resetQueue = resetQueue.sort(columns='set_time', axis='index')
 		if len(resetQueue)==0:
 			return None
