@@ -12,24 +12,20 @@ class DefaultRow(object):
 		self.content['name'] = name
 
 class ExpLogRow(DefaultRow):
-	def __init__ (self, uuid, name, setTime=None, resetTime=None, setVal=None, resetVal=None, origVal=None):
+	def __init__ (self, uuid, name, setTime=None, resetTime=None, setVal=None, origVal=None):
 		super(ExpLogRow, self).__init__(uuid, name)
 		self.content['set_time'] = setTime
-		self.content['reset_time'] = resetTime
 		self.content['set_value'] = setVal
-		self.content['reset_value'] = resetVal
 		self.content['original_value'] = origVal
 	def get_dict(self):
 		return self.content
 
-class ResetRow(DefaultRow):
-	def __init__ (self, uuid, name, setTime=None, resetTime=None, setVal=None, resetVal=None, origVal=None, actuType=None):
+class StatusRow(DefaultRow):
+	def __init__ (self, uuid, name, setTime=None, resetTime=None, setVal=None, resetVal=None, actuType=None):
 		super(ResetRow, self).__init__(uuid, name)
 		self.content['set_time'] = setTime
-		self.content['reset_time'] = resetTime
 		self.content['set_value'] = setVal
 		self.content['reset_value'] = resetVal
-		self.content['original_value'] = origVal
 		self.content['actuator_type'] = actuType
 	def get_dict(self):
 		return self.content
@@ -38,13 +34,11 @@ class SetRow(DefaultRow):
 	def __init__ (self, uuid, name, setTime=None, resetTime=None, setVal=None):
 		super(SetRow, self).__init__(uuid, name)
 		self.content['set_time'] = setTime
-		self.content['reset_time'] = resetTime
 		self.content['set_value'] = setVal
 		self.content['reset_value'] = resetVal
 		self.content['original_value'] = origVal
 	def get_dict(self):
 		return self.content
-
 
 class CollectionWrapper:
 	

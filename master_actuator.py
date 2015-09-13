@@ -102,7 +102,6 @@ class Actuator(object):
 	def set_value(self, val, tp):
 		self.controlFlag = True
 		if self.inputType.validate(val):
-			pass
 			self.bdm.set_sensor(self.uuid, self.sensorType, tp, val)
 		else:
 			print "Failed to validate a value of " + self.zone + '\'s Common Setpoint to ' + str(givenVal)
@@ -117,14 +116,21 @@ class Actuator(object):
 		self.controlFlag = False
 
 	def get_latest_value(self, now):
-		result = self.bdm.get_sensor_ts(self.uuid, self.sensorType, now-timedelta(hours=6), now)
+		result = self.bdm.get_sensor_ts(self.uuid, self.sensorType, now-timedelta(hours=6), now+timedelta(minutes=10))
 		if result.empty:
 			return None
 		else:
-			return result.tail(1).values[0]
+			return result.tail(1).values[0], result.tail(1).index[0]
 	
 	def check_control_flag(self):
 		return self.controlFlag
+
+	def check_dependency(self, commDict, setTime):
+		if commDict['set_time']> setTime-timedelta(minutes=minLatency):
+			return True
+		else:
+			return False
+		
 
 	def get_dependency(self, uuid):
 		if uuid in self.affectingDependencyDict.keys():
