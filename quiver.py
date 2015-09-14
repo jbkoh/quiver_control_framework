@@ -50,7 +50,6 @@ class Quiver:
 	ntpURL = 'ntp.ucsd.edu'
 	timeOffset = timedelta(0)
 	ntpClient = None
-	inputTimeFormat = '%m/%d/%Y %H:%M:%S'
 	actuDict= dict()
 	actuNames = ActuatorNames()
 	futureCommColl = None 	# This is a collection for future command sequence. If some of the commands are issued, they are removed from here.
@@ -79,11 +78,12 @@ class Quiver:
 		# Create pid file for monitoring
 		pid = str(os.getpid())
 		pidfile = "C:\\temp\\quiver.pid"
-		if os.path.isfile(pidfile):
-    		print "%s already exists, exiting" % pidfile
-	    	sys.exit()
-		else:
-    		file(pidfile, 'w').write(pid)
+#		if os.path.isfile(pidfile):
+#			print "%s already exists, exiting" %pidfile
+#			sys.exit()
+#		else:
+#			file(pidfile, 'w').write(pid)
+#TODO: Above should be enabled in final version
 
 	def __del__(self):
 		pass
@@ -244,7 +244,7 @@ class Quiver:
 			actuator = self.actuDict[uuid]
 
 			# Validation 1: Check input range
-			if not actuator.validate_input(setVal)
+			if not actuator.validate_input(setVal):
 				raise QRError("Input value is not in correct range", seqRow[1])
 
 			# Validation 2: Check if there is a dependent command in given batch
@@ -300,9 +300,11 @@ class Quiver:
 				actuator.set_value(setVal, setTime) #TODO: This should not work in test stage
 
 #TODO: Implement this
-		self.ack_issue(seq, True)
+		self.ack_issue(seq)
 
-	def ack_issue(self, seq, setResetFlag):
+	def ack_issue(self, seq):
+		if len(seq)==0:
+			return None
 		seq.index = range(0,len(seq)) # Just to make it sure (need to remove?)
 		issueFlagList = np.array([False]*len(seq))
 		uploadedTimeList = list()
@@ -332,13 +334,15 @@ class Quiver:
 				uuid = row[1]['uuid']
 				setVal = row[1]['set_value']
 				actuator = self.actuDict[uuid]
-						
+
+				if setVal == -1:
+					ackVal = row[1]['reset_value']
 				else:
 					ackVal = row[1]['set_value']
 				actuator = self.actuDict[uuid]
 				currT = self.now()
 				currVal, newSetTime = actuator.get_latest_value(self.now())
-				if currVal==ackVal and newSetTime!=uploadedTimeList[idx]
+				if currVal==ackVal and newSetTime!=uploadedTimeList[idx]:
 					issueFlagList[idx] = True
 				now = self.now()
 				if now>=uploadedTimeList[idx]+resendInterval:

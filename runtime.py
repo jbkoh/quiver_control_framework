@@ -8,6 +8,7 @@ class Runtime():
 	commandSeq = None
 	dummyBeginTime = datetime(2010,1,1,0,0,0)
 	dummeEndTime = datetime(2030,1,1,0,0,0)
+	inputTimeFormat = '%m/%d/%Y %H:%M:%S'
 
 	def __init__(self):
 		self.quiv = Quiver()
@@ -20,13 +21,14 @@ class Runtime():
 		self.commandSeq = seqList
 
 	def load_command_seq(self, beginTime, endTime):
-		idx = np.logical_and(commandSeq['set_time']<endtime, commandSeq['set_time']>=beginTime)
+		idx = np.logical_and(self.commandSeq['set_time']<endTime, self.commandSeq['set_time']>=beginTime)
 		futureCommands = self.commandSeq[idx]
 		self.commandSeq.drop(idx)
 		return futureCommands
 
 	def top_dynamic_control(self):
-		controlInterval = 5*60 # in seconds
+#		controlInterval = 5*60 # in seconds
+		controlInterval = 5# in seconds
 		currTime = self.quiv.now()
 		beforeTime = currTime - timedelta(seconds=controlInterval)
 		while(True):
@@ -44,7 +46,7 @@ class Runtime():
 		self.quiv.system_refresh() #TODO: This line is only for debug, should be removed later
 		try:
 			print '=============Begin of Quiver============='
-			self.read_seq(filename)
+			self.read_seqfile(filename)
 			self.top_dynamic_control()
 			print 'All commands are completed'
 			print '==============End of Quiver=============='
