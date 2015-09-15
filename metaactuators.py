@@ -15,6 +15,18 @@ def make_actuator(uuid, name, zone=None, actuType=None):
 	actuNames = ActuatorNames()
 	if actuType==actuNames.commonSetpoint:
 		return CommonSetpoint(name, uuid, 66,74,zone)
+	if actuType==actuNames.occupiedCommand:
+		return OccupiedCommand(name, uuid, zone)
+	if actuType==actuNames.coolingCommand:
+		return CoolingCommand(name, uuid, 0,100,zone)
+	if actuType==actuNames.heatingCommand:
+		return HeatingCommand(name, uuid, 0,100,zone)
+	if actuType==actuNames.actualSupplyFlowSP:
+		return ActualSupplyFlowSP(name, uuid, 0,500,zone) # TODO: This should be dependent on a zone
+	if actuType==actuNames.damperCommand:
+		return DamperCommand(name, uuid, -0.5,0.5,zone)
+	if actuType==actuNames.occupiedCoolingMinimumFlow:
+		return occupiedCoolingMinimumFlow(name, uuid, 0, 500, zone)
 	else:
 		print "Failed to make an actuator: incorrect type name, " + actuType
 		return None

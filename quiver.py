@@ -20,6 +20,7 @@ import emailauth
 from email.mime.text import MIMEText
 import traceback
 from threading import Thread #TODO: This is for future independent NTP Thread
+import pickle as pkl
 
 #from multiprocessing import Process
 #import threading
@@ -63,6 +64,7 @@ class Quiver:
 	bdm = None
 	ackLatency = timedelta(minutes=10)
 	statusExpiration = timedelta(hours=24)
+	zonelist = None
 
 	def __init__(self):
 		self.ntpClient = ntplib.NTPClient()
@@ -74,6 +76,7 @@ class Quiver:
 		logging.basicConfig(filname='log/debug'+datetime.now().isoformat()[0:-7].replace(':','_') + '.log',level=logging.DEBUG)
 		self.bdm = BDWrapper()
 		self.update_time_offset()
+		self.zonelist = self.csv2list('metadata/zonelist.csv')
 
 		# Create pid file for monitoring
 		pid = str(os.getpid())
@@ -87,6 +90,34 @@ class Quiver:
 
 	def __del__(self):
 		pass
+
+	def csv2list(self, filename):
+		outputList = list()
+		with open(filename, 'r') as fp:
+			reader = csv.reader(fp, delimiter=',')
+			for row in reader:
+				outputList.append(row[0])
+		return outputList
+
+	def init_dependency_map(self):
+		depZoneMap = defaultdict(list)
+		depUuidMap = defaultdict(list)
+		for zone in self.zonelist:
+			for actuType in self.actuNames.nameList():
+				try:
+					uuid = self.get_actuator_uuid(zone, actuType)
+					depMap[zone].append(uuid)
+				except QRError as e:
+					print "There is no sensor corresponding to ", zone, actuType
+		for zone, depList in depZoneMap.iteritems():
+			for uuid in depList:
+				for depUuid in depList:
+					if uuid != depUuid
+					depUuidMap[uuid].append(depUuid)
+
+#TODO: Store this into pkl file
+
+			
 				
 	def notify_systemfault(self):
 		content = "Quiver control system bas been down at " + self.now().isoformat()
@@ -360,24 +391,25 @@ class Quiver:
 			if issueFlagList[row[0]] == True:
 				self.reflect_an_issue_to_db(row[1])
 
-		for idx, flag in enumerate(issueFlagList):
-			if not flag:
-				raise QRError('Some commands are unable to be uploaded', seq[idx])
-
+#		for idx, flag in enumerate(issueFlagList):
+#			if not flag:
+#				raise QRError('Some commands are unable to be uploaded', seq[idx])
+		if False in issueFlagList:
+			raise QRError('Some commands are unable to be uploaded', seq[np.logical_not(issueFlagList)])
 
 	def reflect_an_issue_to_db(self, commDict):
-		zone = row[1]['zone']
-		setVal = row[1]['set_value']
-		actuType = row[1]['actuator_type']
-		uuid = row[1]['uuid']
-		name = row[1]['name']
-		resetVal = row[1]['reset_value']
+		zone = commDict[1]['zone']
+		setVal = commDict[1]['set_value']
+		actuType = commDict[1]['actuator_type']
+		uuid = commDict[1]['uuid']
+		name = commDict[1]['name']
+		resetVal = commDict[1]['reset_value']
 		actuator = self.actuDict[uuid]
 
 		statusRow = StatusRow(uuid, name, setTime=now, setVal=setVal, resetVal=resetVal, actuType=actuType, underControl=actuator.check_control_flag())
-		self.statColl.store_row(statusRow)
+		self.statColl.store_commDict(statusRow)
 		expLogRow = ExpLogRow(uuid, name, setTime=now, setVal=setVal, origVal=origVal)
-		self.expLogColl.store_row(expLogRow)
+		self.expLogColl.store_commDict(expLogRow)
 			
 	def reset_seq(self, seq):
 		for row in seq.iterrows():
