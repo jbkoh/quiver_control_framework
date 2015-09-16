@@ -20,7 +20,9 @@ import emailauth
 from email.mime.text import MIMEText
 import traceback
 from threading import Thread #TODO: This is for future independent NTP Thread
-import pickle as pkl
+import pickle
+from collections import defaultdict, OrderedDict
+import requests
 
 #from multiprocessing import Process
 #import threading
@@ -76,7 +78,9 @@ class Quiver:
 		logging.basicConfig(filname='log/debug'+datetime.now().isoformat()[0:-7].replace(':','_') + '.log',level=logging.DEBUG)
 		self.bdm = BDWrapper()
 		self.update_time_offset()
-		self.zonelist = self.csv2list('metadata/zonelist.csv')
+		self.zonelist = self.csv2list('metadata/partialzonelist.csv')
+		self.depMapFile = 'metadata/dependency_map.pkl'
+		requests.packages.urllib3.disable_warnings()
 
 		# Create pid file for monitoring
 		pid = str(os.getpid())
@@ -103,22 +107,20 @@ class Quiver:
 		depZoneMap = defaultdict(list)
 		depUuidMap = defaultdict(list)
 		for zone in self.zonelist:
-			for actuType in self.actuNames.nameList():
+			for actuType in self.actuNames.nameList:
 				try:
 					uuid = self.get_actuator_uuid(zone, actuType)
-					depMap[zone].append(uuid)
+					depZoneMap[zone].append(uuid)
 				except QRError as e:
 					print "There is no sensor corresponding to ", zone, actuType
 		for zone, depList in depZoneMap.iteritems():
 			for uuid in depList:
 				for depUuid in depList:
-					if uuid != depUuid
-					depUuidMap[uuid].append(depUuid)
+					if uuid != depUuid:
+						depUuidMap[uuid].append(depUuid)
 
-#TODO: Store this into pkl file
+		pickle.dump(depUuidMap, open(self.depMapFile, 'wb'))
 
-			
-				
 	def notify_systemfault(self):
 		content = "Quiver control system bas been down at " + self.now().isoformat()
 		self.notify_email(content)

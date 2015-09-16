@@ -7,6 +7,8 @@ from actuator_names import ActuatorNames
 
 from datetime import datetime, timedelta
 
+import requests
+
 
 #TODO: All the types of actuators classes should be implemented here with the super class, Actuator.
 
