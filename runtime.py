@@ -34,6 +34,7 @@ class Runtime():
 		while(True):
 			self.quiv.top_ntp()
 			currTime = self.quiv.now()
+			print currTime
 			futureCommands = self.load_command_seq(beforeTime, currTime)
 			self.quiv.issue_seq(futureCommands)
 			time.sleep(controlInterval)

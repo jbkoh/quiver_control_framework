@@ -73,14 +73,14 @@ class BDWrapper:
 		#rawData = dict([(key,d[key]) for d in rawData for key in d])
 		#sortedData = OrderedDict(sorted(rawData.items(), key=operator.itemgetter(0)))
 		pdts = pd.DataFrame({'timestamp':sortedData.keys(), 'value':sortedData.values()})
-		g = lambda tp:datetime.strptime(tp, self.bdStrFormat).replace(tzinfo=self.utc).astimezone(self.pst)
+		g = lambda tp:datetime.strptime(tp, self.bdStrFormat).replace(tzinfo=self.utc).astimezone(self.pst).replace(tzinfo=None)
 		pdts['timestamp'] = pdts['timestamp'].apply(g)
 		return pdts
 
 	def rawts2pdseries(self,rawData):
 		rawData = OrderedDict([(key,d[key]) for d in rawData for key in d])
 		for key in rawData.keys():
-			newKey = datetime.strptime(key, self.bdStrFormat).replace(tzinfo=self.utc).astimezone(self.pst)
+			newKey = datetime.strptime(key, self.bdStrFormat).replace(tzinfo=self.utc).astimezone(self.pst).replace(tzinfo=None)
 			rawData[newKey] = rawData.pop(key)
 		pdseries = pd.Series(data=rawData.values(),index=rawData.keys())
 		return pdseries

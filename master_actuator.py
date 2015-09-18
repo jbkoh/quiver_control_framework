@@ -30,7 +30,7 @@ class DefaultType(object):
 		self.maxVal = maxVal
 
 	def validate(self, given):
-		if given <=self.maxVal and given>=self.minVal:
+		if (given <=self.maxVal and given>=self.minVal) or given==-1:
 			return True
 		else:
 			return False
@@ -42,7 +42,7 @@ class OcType(DefaultType):
 		pass
 
 	def validate(self,given):
-		if given in self.commands:
+		if given in self.commands or given==-1:
 			return True
 		else:
 			return False

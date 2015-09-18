@@ -21,12 +21,13 @@ class ExpLogRow(DefaultRow):
 		return self.content
 
 class StatusRow(DefaultRow):
-	def __init__ (self, uuid, name, setTime=None, resetTime=None, setVal=None, resetVal=None, actuType=None):
-		super(ResetRow, self).__init__(uuid, name)
+	def __init__ (self, uuid, name, setTime=None, resetTime=None, setVal=None, resetVal=None, actuType=None, underControl=None):
+		super(StatusRow, self).__init__(uuid, name)
 		self.content['set_time'] = setTime
 		self.content['set_value'] = setVal
 		self.content['reset_value'] = resetVal
 		self.content['actuator_type'] = actuType
+		self.content['under_control'] = underControl
 	def get_dict(self):
 		return self.content
 

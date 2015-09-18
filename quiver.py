@@ -35,6 +35,7 @@ import requests
 #	(3) Rollback.
 #	(4) Monitoring failure and notify by email
 #	(5) Show current status
+#	(6) Compare current representation(Quiver) of status to actual system's status(BD)
 # 3. Every failure of validation raises a QRError
 
 #QRError = Quiber Runtime Error
@@ -78,7 +79,7 @@ class Quiver:
 		logging.basicConfig(filname='log/debug'+datetime.now().isoformat()[0:-7].replace(':','_') + '.log',level=logging.DEBUG)
 		self.bdm = BDWrapper()
 		self.update_time_offset()
-		self.zonelist = self.csv2list('metadata/partialzonelist.csv')
+		self.zonelist = self.csv2list('metadata/zonelist.csv')
 		self.depMapFile = 'metadata/dependency_map.pkl'
 		requests.packages.urllib3.disable_warnings()
 
@@ -268,7 +269,7 @@ class Quiver:
 			actuType = seqRow[1]['actuator_type']
 			setVal = seqRow[1]['set_value']
 			uuid = self.get_actuator_uuid(zone, actuType)
-			name= get_actuator_name(zone, actuType)
+			name= self.get_actuator_name(zone, actuType)
 			seqRow[1]['uuid'] = uuid
 			seqRow[1]['name'] = name
 			
@@ -307,6 +308,7 @@ class Quiver:
 		#TODO: Check if updated seq is returned
 
 		for row in seq.iterrows():
+			idx = row[0]
 			zone = row[1]['zone']
 			setVal = row[1]['set_value']
 			actuType = row[1]['actuator_type']
@@ -314,8 +316,8 @@ class Quiver:
 			name = row[1]['name']
 			actuator = self.actuDict[uuid]
 			now = self.now()
-			origVal = actuator.get_latest_value(now)
-			row[1]['original_value'] = origVal
+			origVal = actuator.get_latest_value(now)[0]
+			seq.loc[idx, 'original_value'] = origVal
 			if actuator.check_control_flag():
 				query = {'uuid':uuid}
 				resetVal = self.statColl.load_dataframe(query).tail(1)
@@ -323,16 +325,15 @@ class Quiver:
 				resetVal = float(resetVal['reset_value'][0])
 			else:
 				resetVal = origVal
-			row[1]['set_time'] = self.now()	
-			seq[row[0]] = row[1]
+			seq.loc[idx, 'reset_value'] = resetVal
+			setTime = self.now()
+			seq.loc[idx, 'set_time'] = setTime
 			if setVal == -1:
-				if actuType in [self.actuNames.CommonSetpoint]:
+				if actuType in [self.actuNames.commonSetpoint]:
 					setVal = float(self.statColl.load_dataframe({'uuid':uuid}).tail(1)['reset_value'][0])
 				actuator.reset_value(setVal, setTime)
 			else:
 				actuator.set_value(setVal, setTime) #TODO: This should not work in test stage
-
-#TODO: Implement this
 		self.ack_issue(seq)
 
 	def ack_issue(self, seq):
@@ -350,16 +351,18 @@ class Quiver:
 			actuator = self.actuDict[uuid]
 			latestVal, setTime = actuator.get_latest_value(self.now())
 			setVal = row[1]['set_value']
-			if (setVal==-1 and latestVal != row[1]) or (setVal!=-1 and latestVal != row[1]['set_value']):
+			# TODO: Think about timing here
+			# What if a value is reset then temporal current value is restored?
+			# Temporarily do not check the case where setVal==-1.
+			if (setVal!=-1 and latestVal != setVal):
 				raise QRError('Initial upload to BD is failed', row[1])
 			uploadedTimeList.append(setTime)
 		uploadedTimeList = np.array(uploadedTimeList)
 
-
 		# Receive ack
 		maxWaitDatetime = max(uploadedTimeList)+maxWaitTime
 		ackInterval = 30 # secounds
-		while maxWaitDatetime>=self.now():
+		while maxWaitDatetime>=self.now(): 
 			for row in seq.iterrows():
 				idx = row[0]
 				if issueFlagList[idx]==True:
@@ -375,18 +378,23 @@ class Quiver:
 				actuator = self.actuDict[uuid]
 				currT = self.now()
 				currVal, newSetTime = actuator.get_latest_value(self.now())
+				logging.debug("ack: uploadTime: %s, downloadTime: %s", str(uploadedTimeList[idx]), str(newSetTime))
 				if currVal==ackVal and newSetTime!=uploadedTimeList[idx]:
 					issueFlagList[idx] = True
+					seq['set_time'][idx] = uploadedTimeList[idx]
+					continue
 				now = self.now()
 				if now>=uploadedTimeList[idx]+resendInterval:
 					setTime = self.now()
 					if setVal==-1:
 						if actuator.actuType in [self.actuNames.CommonSetpoint]:
-							ackVal = row[1]['reset_value']
+							setVal = row[1]['reset_value']
 						actuator.reset_value(setVal,setTime)
 					else:
 						actuator.set_value(setVal, setTime)
 					uploadedTimeList[idx] = setTime
+			if not (False in issueFlagList):
+				break
 			time.sleep(ackInterval)
 
 		for row in seq.iterrows():
@@ -400,18 +408,20 @@ class Quiver:
 			raise QRError('Some commands are unable to be uploaded', seq[np.logical_not(issueFlagList)])
 
 	def reflect_an_issue_to_db(self, commDict):
-		zone = commDict[1]['zone']
-		setVal = commDict[1]['set_value']
-		actuType = commDict[1]['actuator_type']
-		uuid = commDict[1]['uuid']
-		name = commDict[1]['name']
-		resetVal = commDict[1]['reset_value']
+		zone = commDict['zone']
+		setVal = commDict['set_value']
+		actuType = commDict['actuator_type']
+		uuid = commDict['uuid']
+		name = commDict['name']
+		resetVal = commDict['reset_value']
+		setTime = commDict['set_time']
+		origVal = commDict['original_value']
 		actuator = self.actuDict[uuid]
 
-		statusRow = StatusRow(uuid, name, setTime=now, setVal=setVal, resetVal=resetVal, actuType=actuType, underControl=actuator.check_control_flag())
-		self.statColl.store_commDict(statusRow)
-		expLogRow = ExpLogRow(uuid, name, setTime=now, setVal=setVal, origVal=origVal)
-		self.expLogColl.store_commDict(expLogRow)
+		statusRow = StatusRow(uuid, name, setTime=setTime, setVal=setVal, resetVal=resetVal, actuType=actuType, underControl=actuator.check_control_flag())
+		self.statColl.store_row(statusRow)
+		expLogRow = ExpLogRow(uuid, name, setTime=setTime, setVal=setVal, origVal=origVal)
+		self.expLogColl.store_row(expLogRow)
 			
 	def reset_seq(self, seq):
 		for row in seq.iterrows():
