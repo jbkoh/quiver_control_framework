@@ -77,6 +77,7 @@ class Quiver:
 		self.expLogColl = CollectionWrapper('experience_log')
 		self.ntpActivateTime = self.dummyBeginTime
 		logging.basicConfig(filname='log/debug'+datetime.now().isoformat()[0:-7].replace(':','_') + '.log',level=logging.DEBUG)
+		logging.debug('Quiver initialization')
 		self.bdm = BDWrapper()
 		self.update_time_offset()
 		self.zonelist = self.csv2list('metadata/zonelist.csv')
