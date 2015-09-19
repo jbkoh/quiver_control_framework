@@ -26,7 +26,7 @@ def make_actuator(uuid, name, zone=None, actuType=None):
 	if actuType==actuNames.damperCommand:
 		return DamperCommand(name, uuid, -0.5,0.5,zone)
 	if actuType==actuNames.occupiedCoolingMinimumFlow:
-		return occupiedCoolingMinimumFlow(name, uuid, 0, 500, zone)
+		return OccupiedCoolingMinimumFlow(name, uuid, 0, 500, zone)
 	else:
 		print "Failed to make an actuator: incorrect type name, " + actuType
 		return None
@@ -158,7 +158,7 @@ class CoolingCommand(Actuator):
 		super(CoolingCommand, self).reset_value(val, tp)
 	
 	def get_value(self, beginTime, endTime):
-		super(CoolingCommand, self).get_value(beginTime, endTime)
+		return super(CoolingCommand, self).get_value(beginTime, endTime)
 
 class HeatingCommand(Actuator):
 	zone = None
@@ -181,7 +181,7 @@ class HeatingCommand(Actuator):
 		super(HeatingCommand, self).reset_value(val, tp)
 	
 	def get_value(self, beginTime, endTime):
-		super(HeatingCommand, self).get_value(beginTime, endTime)
+		return super(HeatingCommand, self).get_value(beginTime, endTime)
 
 actuNames = ActuatorNames()
 
@@ -206,7 +206,7 @@ class ActualSupplyFlowSP(Actuator):
 		super(ActualSupplyFlowSP, self).reset_value(val, tp)
 	
 	def get_value(self, beginTime, endTime):
-		super(ActualSupplyFlowSP, self).get_value(beginTime, endTime)
+		return super(ActualSupplyFlowSP, self).get_value(beginTime, endTime)
 
 class DamperCommand(Actuator):
 	zone = None
@@ -228,7 +228,7 @@ class DamperCommand(Actuator):
 		super(DamperCommand, self).reset_value(val, tp)
 	
 	def get_value(self, beginTime, endTime):
-		super(DamperCommand, self).get_value(beginTime, endTime)
+		return super(DamperCommand, self).get_value(beginTime, endTime)
 	
 class OccupiedCoolingMinimumFlow(Actuator):
 	zone = None
@@ -249,4 +249,4 @@ class OccupiedCoolingMinimumFlow(Actuator):
 		super(OccupiedCoolingMinimumFlow, self).reset_value(val, tp)
 	
 	def get_value(self, beginTime, endTime):
-		super(OccupiedCoolingMinimumFlow, self).get_value(beginTime, endTime)
+		return super(OccupiedCoolingMinimumFlow, self).get_value(beginTime, endTime)

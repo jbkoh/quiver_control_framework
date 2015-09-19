@@ -2,6 +2,7 @@ from enum import Enum
 from abc import ABCMeta, abstractmethod
 from bd_wrapper import BDWrapper
 from datetime import datetime, timedelta
+import pickle
 
 
 # default occupied command type
@@ -92,11 +93,17 @@ class Actuator(object):
 	bdm = None
 	sensorType = None
 	resetVal = None
+	depMapFile = 'metadata/dependency_map.pkl'
 
 	def __init__(self, minLatency):
 # minLatency(datetime) ->
 		self.minLatency = minLatency
 		self.bdm = BDWrapper()
+		depMap = pickle.load(open(self.depMapFile, 'rb'))
+		if self.uuid in depMap.keys():
+			for depUuid in depMap[self.uuid]:
+				self.affectingDependencyDict[depUuid] = timedelta(minutes=10)
+				self.affectedDependencyDict[depUuid] = timedelta(minutes=10)
 
 	@abstractmethod
 	def set_value(self, val, tp):
@@ -141,10 +148,10 @@ class Actuator(object):
 			return None
 	
 	def get_dependent_actu_list(self):
-		return affectingDependencyDict.keys() + affectedDependencyDict.keys()
+		return self.affectingDependencyDict.keys() + self.affectedDependencyDict.keys()
 	
 	def get_longest_dependency(self):
-		return max(max(self.affectedDependencyDict.values),max(self.affectingDependencyDict.values()))
+		return max(max(self.affectedDependencyDict.values()),max(self.affectingDependencyDict.values()))
 
 	def validate_input(self, given):
 		return self.inputType.validate(given)

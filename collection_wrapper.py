@@ -12,7 +12,7 @@ class DefaultRow(object):
 		self.content['name'] = name
 
 class ExpLogRow(DefaultRow):
-	def __init__ (self, uuid, name, setTime=None, resetTime=None, setVal=None, origVal=None):
+	def __init__ (self, uuid, name, setTime=None, setVal=None, origVal=None):
 		super(ExpLogRow, self).__init__(uuid, name)
 		self.content['set_time'] = setTime
 		self.content['set_value'] = setVal
@@ -21,7 +21,7 @@ class ExpLogRow(DefaultRow):
 		return self.content
 
 class StatusRow(DefaultRow):
-	def __init__ (self, uuid, name, setTime=None, resetTime=None, setVal=None, resetVal=None, actuType=None, underControl=None):
+	def __init__ (self, uuid, name, setTime=None, setVal=None, resetVal=None, actuType=None, underControl=None):
 		super(StatusRow, self).__init__(uuid, name)
 		self.content['set_time'] = setTime
 		self.content['set_value'] = setVal

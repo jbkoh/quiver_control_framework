@@ -21,9 +21,10 @@ class Runtime():
 		self.commandSeq = seqList
 
 	def load_command_seq(self, beginTime, endTime):
-		idx = np.logical_and(self.commandSeq['set_time']<endTime, self.commandSeq['set_time']>=beginTime)
-		futureCommands = self.commandSeq[idx]
-		self.commandSeq.drop(idx)
+		boolIdx = np.logical_and(self.commandSeq['set_time']<endTime, self.commandSeq['set_time']>=beginTime)
+		idx = [i for i, elem in enumerate(boolIdx) if elem]
+		futureCommands = self.commandSeq[boolIdx]
+		self.commandSeq = self.commandSeq.drop(idx)
 		return futureCommands
 
 	def top_dynamic_control(self):
@@ -44,7 +45,7 @@ class Runtime():
 				return
 
 	def top(self, filename):
-		self.quiv.system_refresh() #TODO: This line is only for debug, should be removed later
+		#self.quiv.system_refresh()
 		try:
 			print '=============Begin of Quiver============='
 			self.read_seqfile(filename)

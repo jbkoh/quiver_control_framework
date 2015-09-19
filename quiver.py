@@ -68,19 +68,20 @@ class Quiver:
 	ackLatency = timedelta(minutes=10)
 	statusExpiration = timedelta(hours=24)
 	zonelist = None
+	logger = None
 
 	def __init__(self):
 		self.ntpClient = ntplib.NTPClient()
 		client = pymongo.MongoClient()
-		self.futureCommColl = CollectionWrapper('command_sequence')
 		self.statColl = CollectionWrapper('status')
 		self.expLogColl = CollectionWrapper('experience_log')
 		self.ntpActivateTime = self.dummyBeginTime
 		logging.basicConfig(filname='log/debug'+datetime.now().isoformat()[0:-7].replace(':','_') + '.log',level=logging.DEBUG)
-		logging.debug('Quiver initialization')
+		self.logger = logging.getLogger()
+		self.logger.debug('Quiver initialization')
 		self.bdm = BDWrapper()
 		self.update_time_offset()
-		self.zonelist = self.csv2list('metadata/zonelist.csv')
+		self.zonelist = self.csv2list('metadata/partialzonelist.csv')
 		self.depMapFile = 'metadata/dependency_map.pkl'
 		requests.packages.urllib3.disable_warnings()
 
@@ -173,17 +174,6 @@ class Quiver:
 		else:
 			return uuids[0]
 
-
-	def load_future_seq(self, beginTime, endTime):
-		query = {'$and':[{'set_time':{'$lte':endTime}}, {'set_time':{'$gte':beginTime}}]}
-		futureSeq = self.futureCommColl.load_dataframe(query)
-		invalidCommand = self.validate_batch(futureSeq)
-		if invalidCommand.empty:
-			self.futureCommColl.remove_dataframe(query)
-			return futureSeq
-		else:
-			raise QRError(errorType='A command is depedent to currently opearting actuator', value=invalidCommand)
-
 	def load_reset_seq(self, endTime):
 		query = {'reset_time':{'$lte':endTime}}
 		futureSeq = self.statColl.pop_dataframe(query)
@@ -206,7 +196,6 @@ class Quiver:
 			uuid = row[1]['uuid']
 			actuator = self.actuDict[uuid]
 			actuator.reset_value(resetVal, currTime)
-		self.futureCommColl.remove_all()
 		self.statColl.remove_all()
 
 	def validate_command_seq_freq(self,seq):
@@ -275,7 +264,10 @@ class Quiver:
 			seqRow[1]['name'] = name
 			
 			if not uuid in self.actuDict.keys():
-				self.actuDict[uuid] = metaactuators.make_actuator(uuid, name, zone, actuType)
+				actuator = metaactuators.make_actuator(uuid, name, zone, actuType)
+				if actuator == None:
+					raise QRError('Incorrect actuator type', actuType)
+				self.actuDict[uuid] = actuator
 			actuator = self.actuDict[uuid]
 
 			# Validation 1: Check input range
@@ -379,10 +371,10 @@ class Quiver:
 				actuator = self.actuDict[uuid]
 				currT = self.now()
 				currVal, newSetTime = actuator.get_latest_value(self.now())
-				logging.debug("ack: uploadTime: %s, downloadTime: %s", str(uploadedTimeList[idx]), str(newSetTime))
+				logger.debug("ack: uploadTime: %s, downloadTime: %s", str(uploadedTimeList[idx]), str(newSetTime))
 				if currVal==ackVal and newSetTime!=uploadedTimeList[idx]:
 					issueFlagList[idx] = True
-					seq['set_time'][idx] = uploadedTimeList[idx]
+					seq.loc[idx, 'set_time'] = uploadedTimeList[idx]
 					continue
 				now = self.now()
 				if now>=uploadedTimeList[idx]+resendInterval:
@@ -428,7 +420,6 @@ class Quiver:
 		for row in seq.iterrows():
 			#TODO: validate_in_log
 			print row
-			resetTime = row[1]['reset_time']
 			resetVal = row[1]['reset_value']
 			actuType = row[1]['actuator_type']
 			uuid = row[1]['uuid']
@@ -437,7 +428,7 @@ class Quiver:
 			now = self.now()
 			origVal = actuator.get_value(now-timedelta(hours=1), now).tail(1)[0]
 			actuator.reset_value(resetVal, resetTime)
-			expLogRow = ExpLogRow(uuid, name, setTime=None, resetTime=resetTime, setVal=None, resetVal=now, origVal=origVal)
+			expLogRow = ExpLogRow(uuid, name, setTime=None, setVal=None, resetVal=now, origVal=origVal)
 			print expLogRow
 			self.expLogColl.store_row(expLogRow)
 
@@ -450,82 +441,115 @@ class Quiver:
 			self.update_time_offset
 			self.ntpActivateTime = self.now() + ntpLatency
 
-	def top_ux(self,filename):
-		newSeq = self.read_seqfile(filename)
-		invalidCommand = self.static_validate(newSeq)
-		if invalidCommand.empty:
-			self.futureCommColl.store_dataframe(newSeq)
-			print "Input commands are successfully stored"
-			return True
-		else:
-			raise QRError('Invalid command', invalidCommand)
-
 	def system_close_common_behavior(self):
-		#self.futureCommColl.remove_all()
 		pass
 
 	def system_refresh(self):
-		self.futureCommColl.remove_all()
 		self.expLogColl.remove_all()
 		self.statColl.remove_all()
 	
+
+	# rollback does not rollback to original state but rollback by "-1"
 	def emergent_rollback(self):
 		queryAll = {}
 		resetQueue = self.statColl.pop_dataframe(queryAll)
 		resetQueue = resetQueue.sort(columns='set_time', axis='index')
+		maxConcurrentResetNum = 10
+		resetInterval = 10*60 # 10 minutes
 		if len(resetQueue)==0:
 			return None
-		resetSeq= defaultdict(list)
+		resetSeq= defaultdict(dict)
+		#resetSeq = [[]]
 
 		# Make actuators to reset and get earliest set time dependent on reset_queue
 		earliestDepTime = self.dummyEndTime
 		for row in resetQueue.iterrows():
 			uuid = row[1]['uuid']
 			name = row[1]['name']
-			zone = row[1]['zone']
 			actuType = row[1]['actuator_type']
-			actuator = metaactuators.make_actuator(uuid,name,zone,actuType)
 			if not uuid in self.actuDict.keys():
-				self.actuDict['uuid'] = actuator
+				actuator = metaactuators.make_actuator(uuid,name,actuType=actuType)
+				if actuator == None:
+					#raise QRError('Incorrect actuator type', actuType)
+					print("Incorrect actuator type: ", actuType)
+					continue
+				self.actuDict[uuid] = actuator
 			setTime = row[1]['set_time']
 			dependentTime = setTime - actuator.get_longest_dependency()
 			if earliestDepTime > dependentTime:
 				earliestDepTime = dependentTime
 
-		logQuery = {'$and':[{'reset_time':{'$gte':earliestDepTime}},{'reset_time':{'$lte':now}}]}
-		expLog = expLogColl.load_dataframe(logQuery)
-		
-		# Construct reset sequence (dict of list. dict's key is target time)
-		#TODO: Filter resetQueue by removing redundant reset signals
-		now = self.now()
-		while len(resetQueue)>0:
-			currResetList = dict()
-			for row in resetQueue.iterrows():
-				uuid = row[1]['uuid']
-				zone = row[1]['zone']
-				actuator = self.actuDict[uuid]
-				depFlag = False
-				for uuid in actuator.get_dependent_actu_list():
-					if (uuid in logQuery['uuid'][logQuery['reset_time']>=now-actuator.minLatencty]) or (uuid in currResetList):
-						depFlag = True
-						break
-				if not depFlag:
-					currResetList[uuid] = row[1]['reset_value']
-					resetQueue = resetQueue.drop(row[2])
-			now = now + timedelta(minutes=10)
-			resetSeq.append(currResetList)
+		# Construct Reset Sequence
+		# Filter redundant controls and align with dependency
+		for row in resetQueue.iterrows():
+			uuid = row[1]['uuid']
+			inQFlag = False
+			for l in resetSeq.values():
+				if uuid in l.keys():
+					inQFlag = True
+			if inQFlag == True:
+				continue
+			actuator = self.actuDict[uuid]
+			lastKey = 0
+			insertedFlag = False
+			for k,l in resetSeq.iteritems():
+				depList = actuator.get_dependent_actu_list()
+				if not bool(set(depList) & set(l.keys())) and len(l)<maxConcurrentResetNum:
+					resetSeq[k][uuid] = row[1]
+					insertedFlag = True
+				lastKey = k
+			lastKey += 1
+			if not insertedFlag:
+				resetSeq[lastKey][uuid] = row[1]
 
-		# Reset all the sensors registered at reset_queue
-		for currResetList in resetSeq:
-			for uuid, resetVal in currResetList.iteritems():
+		# Rollback
+		for k, l in resetSeq.iteritems():
+			for stat in l.values():
+				uuid = stat['uuid']
+				name = stat['name']
+				actuType = stat['actuator_type']
+				if actuType in [self.actuNames.commonSetpoint]:
+					setVal = stat['reset_value']
+				else:
+					setVal = -1
 				actuator = self.actuDict[uuid]
 				now = self.now()
-				origVal = actuator.get_latest_value(now)
-				expLogRow = ExpLogRow(uuid, actuator.name, now, setVal=actuator.resetVal, origVal=origVal)
-				self.expLogColl.store_row(expLogRow)
-				actuator.reset_value(resetVal)
-			# TODO: I have to acknowledge that the value is reset. However, how can I check if the reset value is -1?? How can I know if the value is reset or just changed?
-			time.sleep(self.minResetLatency)
+				origVal = actuator.get_value(now-timedelta(hours=1), now).tail(1)[0]
+				setTime = self.now()
+				expLogRow = ExpLogRow(uuid, name, setTime=setTime, setVal=setVal, origVal=origVal)
+				actuator.reset_value(setVal, setTime)
+			time.sleep(resetInterval)
+
+#		# Construct reset sequence (dict of list. dict's key is target time)
+#		#TODO: Filter resetQueue by removing redundant reset signals
+#		now = self.now()
+#		while len(resetQueue)>0:
+#			currResetList = dict()
+#			for row in resetQueue.iterrows():
+#				uuid = row[1]['uuid']
+#				actuator = self.actuDict[uuid]
+#				depFlag = False
+#				for uuid in actuator.get_dependent_actu_list():
+#					if (uuid in logQuery['uuid'][logQuery['reset_time']>=now-actuator.minLatencty]) or (uuid in currResetList):
+#						depFlag = True
+#						break
+#				if not depFlag:
+#					currResetList[uuid] = row[1]['reset_value']
+#					resetQueue = resetQueue.drop(row[2])
+#			now = now + timedelta(minutes=10)
+#			resetSeq.append(currResetList)
+#
+#		# Reset all the sensors registered at reset_queue
+#		for currResetList in resetSeq:
+#			for uuid, resetVal in currResetList.iteritems():
+#				actuator = self.actuDict[uuid]
+#				now = self.now()
+#				origVal = actuator.get_latest_value(now)
+#				expLogRow = ExpLogRow(uuid, actuator.name, now, setVal=actuator.resetVal, origVal=origVal)
+#				self.expLogColl.store_row(expLogRow)
+#				actuator.reset_value(resetVal)
+#			# TODO: I have to acknowledge that the value is reset. However, how can I check if the reset value is -1?? How can I know if the value is reset or just changed?
+#			time.sleep(self.minResetLatency)
 	
 	def get_currest_status(self):
 		return self.statColl.load_dataframe({'under_control':True})
