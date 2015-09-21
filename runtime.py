@@ -22,9 +22,12 @@ class Runtime():
 
 	def load_command_seq(self, beginTime, endTime):
 		boolIdx = np.logical_and(self.commandSeq['set_time']<endTime, self.commandSeq['set_time']>=beginTime)
+		if True in boolIdx.tolist():
+			pass
 		idx = [i for i, elem in enumerate(boolIdx) if elem]
 		futureCommands = self.commandSeq[boolIdx]
 		self.commandSeq = self.commandSeq.drop(idx)
+		self.commandSeq.index = range(0,len(self.commandSeq))
 		return futureCommands
 
 	def top_dynamic_control(self):

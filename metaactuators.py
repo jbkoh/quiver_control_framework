@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 def make_actuator(uuid, name, zone=None, actuType=None):
 	actuNames = ActuatorNames()
 	if actuType==actuNames.commonSetpoint:
-		return CommonSetpoint(name, uuid, 66,74,zone)
+		return CommonSetpoint(name, uuid, 64,76,zone)
 	if actuType==actuNames.occupiedCommand:
 		return OccupiedCommand(name, uuid, zone)
 	if actuType==actuNames.coolingCommand:
@@ -40,7 +40,7 @@ class CommonSetpoint(Actuator):
 	def __init__ (self, name, uuid, minVal, maxVal, zone):
 		self.name = name
 		self.uuid = uuid
-		super(CommonSetpoint, self).__init__(timedelta(minutes=1))
+		super(CommonSetpoint, self).__init__(timedelta(minutes=10))
 		self.inputType = master_actuator.TempType(minVal, maxVal)
 		self.zone = zone
 		self.template = self.actuNames.commonSetpoint
@@ -145,7 +145,7 @@ class CoolingCommand(Actuator):
 	def __init__(self, name, uuid, minVal, maxVal, zone):
 		self.name = name
 		self.uuid = uuid
-		super(CoolingCommand, self).__init__(timedelta(minutes=5))
+		super(CoolingCommand, self).__init__(timedelta(minutes=10))
 		self.inputType = master_actuator.PercentType(minVal, maxVal)
 		self.zone = zone
 		self.template = self.actuNames.coolingCommand
@@ -168,7 +168,7 @@ class HeatingCommand(Actuator):
 	def __init__(self, name, uuid, minVal, maxVal, zone):
 		self.name = name
 		self.uuid = uuid
-		super(HeatingCommand, self).__init__(timedelta(minutes=5))
+		super(HeatingCommand, self).__init__(timedelta(minutes=10))
 		self.inputType = master_actuator.PercentType(minVal, maxVal)
 		self.zone = zone
 		self.template = self.actuNames.heatingCommand
@@ -193,7 +193,7 @@ class ActualSupplyFlowSP(Actuator):
 	def __init__(self, name, uuid, minVal, maxVal, zone):
 		self.name = name
 		self.uuid = uuid
-		super(ActualSupplyFlowSP, self).__init__(timedelta(minutes=5))
+		super(ActualSupplyFlowSP, self).__init__(timedelta(minutes=10))
 		self.inputType = master_actuator.FlowType(minVal, maxVal)
 		self.zone = zone
 		self.template = self.actuNames.actualSupplyFlowSP
@@ -215,7 +215,7 @@ class DamperCommand(Actuator):
 	def __init__(self, name, uuid, minVal, maxVal, zone):
 		self.name = name
 		self.uuid = uuid
-		super(DamperCommand, self).__init__(timedelta(minutes=1))
+		super(DamperCommand, self).__init__(timedelta(minutes=10))
 		self.inputType = master_actuator.DamperPosType(minVal,maxVal)
 		template = actuNames.damperCommand
 		self.zone = zone
@@ -236,7 +236,7 @@ class OccupiedCoolingMinimumFlow(Actuator):
 	def __init__(self, name, uuid, minVal, maxVal, zone):
 		self.name = name
 		self.uuid = uuid
-		super(OccupiedCoolingMinimumFlow, self).__init__(timedelta(minutes=5))
+		super(OccupiedCoolingMinimumFlow, self).__init__(timedelta(minutes=10))
 		self.inputType = master_actuator.FlowType(0,500)
 		self.zone = zone
 		self.template = actuNames.occupiedCoolingMinimumFlow

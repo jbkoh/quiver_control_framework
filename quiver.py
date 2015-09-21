@@ -315,7 +315,7 @@ class Quiver:
 				query = {'uuid':uuid}
 				resetVal = self.statColl.load_dataframe(query).tail(1)
 				#TODO: This should become more safe. e.g., what if that is no data in statColl?
-				resetVal = float(resetVal['reset_value'][0])
+				resetVal = float(resetVal['reset_value'])
 			else:
 				resetVal = origVal
 			seq.loc[idx, 'reset_value'] = resetVal
@@ -364,14 +364,20 @@ class Quiver:
 				setVal = row[1]['set_value']
 				actuator = self.actuDict[uuid]
 
+				if setVal==-1: #TODO: This is temporary version need to check
+					issueFlagList[idx] = True
+					seq.loc[idx, 'set_time'] = uploadedTimeList[idx]
+					continue 
+
 				if setVal == -1:
 					ackVal = row[1]['reset_value']
 				else:
 					ackVal = row[1]['set_value']
+				actuType = row[1]['actuator_type']
 				actuator = self.actuDict[uuid]
 				currT = self.now()
 				currVal, newSetTime = actuator.get_latest_value(self.now())
-				logger.debug("ack: uploadTime: %s, downloadTime: %s", str(uploadedTimeList[idx]), str(newSetTime))
+				self.logger.debug("ack: uploadTime: %s, downloadTime: %s", str(uploadedTimeList[idx]), str(newSetTime))
 				if currVal==ackVal and newSetTime!=uploadedTimeList[idx]:
 					issueFlagList[idx] = True
 					seq.loc[idx, 'set_time'] = uploadedTimeList[idx]
@@ -380,7 +386,7 @@ class Quiver:
 				if now>=uploadedTimeList[idx]+resendInterval:
 					setTime = self.now()
 					if setVal==-1:
-						if actuator.actuType in [self.actuNames.CommonSetpoint]:
+						if actuType in [self.actuNames.commonSetpoint]:
 							setVal = row[1]['reset_value']
 						actuator.reset_value(setVal,setTime)
 					else:
@@ -411,6 +417,7 @@ class Quiver:
 		origVal = commDict['original_value']
 		actuator = self.actuDict[uuid]
 
+		self.statColl.pop_dataframe({'uuid':uuid})
 		statusRow = StatusRow(uuid, name, setTime=setTime, setVal=setVal, resetVal=resetVal, actuType=actuType, underControl=actuator.check_control_flag())
 		self.statColl.store_row(statusRow)
 		expLogRow = ExpLogRow(uuid, name, setTime=setTime, setVal=setVal, origVal=origVal)
