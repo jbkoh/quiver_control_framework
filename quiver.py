@@ -364,10 +364,10 @@ class Quiver:
 				setVal = row[1]['set_value']
 				actuator = self.actuDict[uuid]
 
-				if setVal==-1: #TODO: This is temporary version need to check
-					issueFlagList[idx] = True
-					seq.loc[idx, 'set_time'] = uploadedTimeList[idx]
-					continue 
+				#if setVal==-1: #TODO: This is temporary version need to check
+				#	issueFlagList[idx] = True
+				#	seq.loc[idx, 'set_time'] = uploadedTimeList[idx]
+				#	continue 
 
 				if setVal == -1:
 					ackVal = row[1]['reset_value']
@@ -378,7 +378,7 @@ class Quiver:
 				currT = self.now()
 				currVal, newSetTime = actuator.get_latest_value(self.now())
 				self.logger.debug("ack: uploadTime: %s, downloadTime: %s", str(uploadedTimeList[idx]), str(newSetTime))
-				if currVal==ackVal and newSetTime!=uploadedTimeList[idx]:
+				if (setVal!=-1 and currVal==ackVal and newSetTime!=uploadedTimeList[idx]) or (setVal==-1 and currVal!=-1):
 					issueFlagList[idx] = True
 					seq.loc[idx, 'set_time'] = uploadedTimeList[idx]
 					continue
