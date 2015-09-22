@@ -1,16 +1,101 @@
 from bd_wrapper import BDWrapper
 from collection_wrapper import CollectionWrapper
+from actuator_names import ActuatorNames
+from sensor_names import SensorNames
 
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
+#import sklearn.cluster.KMeans as KMeans
+import pickle
+import csv
 
 
-class analyzer:
+
+class Analyzer:
 	bdm = None
 	expLogColl = None
-
+	timeGran = timedelta(minutes=5)
+	actuNames = ActuatorNames()
+	sensorNames = SensorNames()
+	zonelist = None
+	
 	def __init__(self):
-		self.bdm = BDWrapper
+		self.bdm = BDWrapper()
 		self.expLogColl = CollectionWrapper('experience_log')
+		self.zonelist = self.csv2list('metadata/partialzonelist.csv')
+	
+	def csv2list(self, filename):
+		outputList = list()
+		with open(filename, 'r') as fp:
+			reader = csv.reader(fp, delimiter=',')
+			for row in reader:
+				outputList.append(row[0])
+		return outputList
 
+	def get_actuator_uuid(self, zone=None, actuType=None):
+		context = dict()
+		if zone != None:
+			context['room']=zone
+		if actuType != None:
+			context['template']=actuType
+		uuids = self.bdm.get_sensor_uuids(context)
+		if len(uuids)>1:
+			raise QRError('Many uuids are found', context)
+		elif len(uuids)==0:
+			raise QRError('No uuid is found', context)
+		else:
+			return uuids[0]
+
+	def normalize_data(self, rawData, beginTime, endTime):
+		procData = pd.Series({beginTime:float(rawData[0])})
+		tp = beginTime
+		while tp<=endTime:
+			tp = tp+self.timeGran
+			leftSeries = rawData[:tp]
+			if len(leftSeries)>0:
+				idx = len(leftSeries)-1
+				leftVal = leftSeries[idx]
+				leftIdx = leftSeries.index[idx]
+			else:
+				leftVal = None
+			rightSeries = rawData[tp:]
+			if len(rightSeries)>0:
+				rightVal = rightSeries[0]
+				rightIdx = rightSeries.index[0]
+			else:
+				rightVal = None
+			if rightVal==None and leftVal!=None:
+				newVal = leftVal
+			elif rightVal!=None and leftVal==None:
+				newVal = rightVal
+			elif rightVal!=None and leftVal!=None:
+				leftDist = (tp - leftIdx).total_seconds()
+				rightDist = (rightIdx - tp).total_seconds()
+				newVal = (leftVal*rightDist+rightVal*leftDist)/(rightDist+leftDist)
+			else:
+				print "ERROR: no data found in raw data"
+				newVal = None
+			newData = pd.Series({tp:newVal})
+			procData = procData.append(newData)
+		return procData
+
+	def receive_a_sensor(self, zone, actuType, beginTime, endTime):
+		uuid = self.get_actuator_uuid(zone, actuType)
+		rawData = self.bdm.get_sensor_ts(uuid, 'PresentValue', beginTime, endTime)
+		procData = self.normalize_data(rawData, beginTime, endTime)
+		return procData
+	
+	def receive_entire_sensors(self, beginTime, endTime):
+		#TODO: Should be parallelized here
+		filename='data/'+beginTime.isoformat()[0:-7].replace(':','_') + '.pkl'
+		dataDict = dict()
+		for zone in self.zonelist:
+			zoneDict = dict()
+			for actuType in self.actuNames.nameList+self.sensorNames.nameList:
+				uuid = self.get_actuator_uuid(zone, actuType)
+				data = self.receive_a_sensor(zone, actuType, beginTime, endTime)
+				zoneDict[actuType] = data
+			dataDict[zone] = zoneDict
+
+		pickle.dump(dataDict, open(filename, 'wb'))
