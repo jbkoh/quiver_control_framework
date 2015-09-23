@@ -213,11 +213,11 @@ def plot_colormap_upgrade(data, figSizeIn, xlabel, ylabel, cbarlabel, cmapIn, yt
 	plt.show()
 	return fig
 
-def plot_timeseries(x, y, xlabel=None, ylabel=None,  xticks=None, xtickTags=None, yticks=None, ytickTags=None, title=None, xtickRotate=None, dateFormat=None,color=None, axis=None, fig=None):
+def plot_timeseries(x, y, xlabel=None, ylabel=None,  xticks=None, xtickTags=None, yticks=None, ytickTags=None, title=None, xtickRotate=None, dateFormat=None,color=None, axis=None, fig=None, dataLabel=None):
 	if axis==None:
 		fig, axis = plt.subplots(1,1)
 	
-	axis.plot_date(x, y, linestyle='-', marker='None',tz=pst, color=color)
+	plotObj = axis.plot_date(x, y, linestyle='-', marker='None',tz=pst, color=color, label=dataLabel)
 
 	if xlabel!=None:
 		axis.set_xlabel
@@ -240,7 +240,7 @@ def plot_timeseries(x, y, xlabel=None, ylabel=None,  xticks=None, xtickTags=None
 	if dateFormat!=None:
 		axis.xaxis.set_major_formatter(dateFormat)
 	
-	return fig, axis
+	return fig, axis, plotObj
 
 # x (list of np.array(datetime)), y (list of np.array(number)) -> fig 
 def plot_multiple_timeseries(xs, ys, xlabel, ylabel, xticks=None, xtickTags=None, yticks=None, ytickTags=None, titles=None, xtickRotate=None, dateFormat=None,color=None):

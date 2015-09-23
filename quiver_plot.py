@@ -1,5 +1,6 @@
 from bd_wrapper import BDWrapper
 import plotter
+reload(plotter)
 import matplotlib.pyplot as plt
 
 from datetime import datetime, timedelta
@@ -33,14 +34,33 @@ class QuiverPlotter:
 		dataNum = len(dataDict)
 
 		fig, axes = plt.subplots(dataNum,1)
+		dataLabelIdx = 0
 #		g = lambda tp:tp.replace(tzinfo=None)	
 		g = lambda tp:self.pst.localize(tp)
 		for idx, (zone, actuType) in enumerate(dataDict):
-			title = zone + ", " + actuType
-			uuid = self.get_actuator_uuid(zone, actuType)
-			data = self.bdm.get_sensor_ts(uuid, 'PresentValue', beginTime, endTime)
-			tp = map(g, data.index)
-			plotter.plot_timeseries(tp, data.values, axis=axes[idx], title=title)
+			if type(actuType)!=list:
+				title = zone + ", " + actuType
+				uuid = self.get_actuator_uuid(zone, actuType)
+				data = self.bdm.get_sensor_ts(uuid, 'PresentValue', beginTime, endTime)
+				tp = map(g, data.index)
+				plotter.plot_timeseries(tp, data.values, axis=axes[idx], title=title)
+			else:
+				plotObjList = list()
+				for oneActu in actuType:
+					uuid = self.get_actuator_uuid(zone, oneActu)
+					data = self.bdm.get_sensor_ts(uuid, 'PresentValue', beginTime, endTime)
+					tp = map(g, data.index)
+#					if dataLabels!=None:
+#						dataLabel = dataLabels[dataLabelIdx]
+#						dataLabelIdx += 1
+#					else:
+#						dataLabel = None
+					_,_,plotObj = plotter.plot_timeseries(tp,data.values, axis=axes[idx], dataLabel=oneActu)
+					plotObjList.append(plotObj)
+#				axes[idx].legend(handles=plotObjList, fontsize=8, loc='best')
+			#	axes[idx].legend(plotObjList, actuType)
+				axes[idx].legend()
+					
 
 		fig.set_size_inches((10,12))
 		plotter.save_fig(fig, self.baseDir+"test.pdf")
