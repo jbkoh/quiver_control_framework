@@ -133,7 +133,7 @@ class Actuator(object):
 		return self.controlFlag
 
 	def check_dependency(self, commDict, setTime):
-		if commDict['set_time']> setTime-timedelta(minutes=minLatency):
+		if (commDict['set_time']> setTime-self.minLatency) and commDict['uuid']==self.uuid:
 			return True
 		else:
 			return False

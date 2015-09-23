@@ -76,9 +76,9 @@ class Quiver:
 		self.statColl = CollectionWrapper('status')
 		self.expLogColl = CollectionWrapper('experience_log')
 		self.ntpActivateTime = self.dummyBeginTime
-		logging.basicConfig(filname='log/debug'+datetime.now().isoformat()[0:-7].replace(':','_') + '.log',level=logging.DEBUG)
-		self.logger = logging.getLogger()
-		self.logger.debug('Quiver initialization')
+		logging.basicConfig(filename='log/debug'+datetime.now().isoformat()[0:-7].replace(':','_') + '.log',level=logging.DEBUG, format='%(asctime)s [%(levelname)s] %(message)s')
+		#logger = logging.getLogger()
+		logging.debug('Quiver initialization')
 		self.bdm = BDWrapper()
 		self.update_time_offset()
 		self.zonelist = self.csv2list('metadata/partialzonelist.csv')
@@ -266,28 +266,33 @@ class Quiver:
 			if not uuid in self.actuDict.keys():
 				actuator = metaactuators.make_actuator(uuid, name, zone, actuType)
 				if actuator == None:
+					logging.error("Incorrect actuator type: %s", actuType)
 					raise QRError('Incorrect actuator type', actuType)
 				self.actuDict[uuid] = actuator
 			actuator = self.actuDict[uuid]
 
 			# Validation 1: Check input range
 			if not actuator.validate_input(setVal):
+				logging.error("Input value is not in correct range: %s", repr(seqRow[1]))
 				raise QRError("Input value is not in correct range", seqRow[1])
 
 			# Validation 2: Check if there is a dependent command in given batch
 			for otherSeqRow in seq.iterrows():
 				if seqRow[0]!=otherSeqRow[0]:
-					if actuator.check_dependency(otherSeqRow[1]):
-						raise QRError("A command is dependent on a command in the given sequence", seqRow[1], otherSeqRow[1])
-					elif aotherSeqRow[1]['uuid'] == uuid:
-						raise QRError('A command has same target equipment with another', seqRow[1], otherSeqRow[1])
+					if actuator.check_dependency(otherSeqRow[1], self.now()):
+						logging.error("A command is dependent on a command in the given sequence: %s", repr(seqRow[1]) + repr(otherSeqRow[1]))
+						raise QRError("A command is dependent on a command in the given sequence", repr(seqRow[1]) + repr(otherSeqRow[1]))
+					elif otherSeqRow[1]['uuid'] == uuid:
+						logging.error('A command has same target equipment with another: %s', repr(seqRow[1])+ repr(otherSeqRow[1]))
+						raise QRError('A command has same target equipment with another', repr(seqRow[1])+ repr(otherSeqRow[1]))
 
 			# Validation 3: Check if there is a dependent command in current status
 			queryDep = {'set_time':{'$gte':self.now()-actuator.minLatency}}
 			depCommands = self.statColl.load_dataframe(queryDep)
 			for commRow in depCommands.iterrows():
-				if actuator.check_dependency(commRow[1]):
-					raise QRError("A command is dependent on current status", seqRow[1], commRow[1])
+				if actuator.check_dependency(commRow[1], self.now()):
+					logging.error("A command is dependent on current status: %s", repr(seqRow[1])+repr(commRow[1]))
+					raise QRError("A command is dependent on current status", repr(seqRow[1])+repr(commRow[1]))
 
 			seq.loc[seqRow[0]] = seqRow[1]
 
@@ -297,7 +302,9 @@ class Quiver:
 		return currTime
 
 	def issue_seq(self, seq):
+		logging.debug('Start issuing: \n%s', repr(seq))
 		self.validate_batch(seq)
+		logging.debug('Validation is done')
 		#TODO: Check if updated seq is returned
 
 		for row in seq.iterrows():
@@ -325,8 +332,10 @@ class Quiver:
 				if actuType in [self.actuNames.commonSetpoint]:
 					setVal = float(self.statColl.load_dataframe({'uuid':uuid}).tail(1)['reset_value'][0])
 				actuator.reset_value(setVal, setTime)
+				logging.debug('Reset a value: %s by %s', actuType, str(setVal))
 			else:
 				actuator.set_value(setVal, setTime) #TODO: This should not work in test stage
+				logging.debug('Set a value: %s by %s', actuType, str(setVal))
 		self.ack_issue(seq)
 
 	def ack_issue(self, seq):
@@ -377,7 +386,7 @@ class Quiver:
 				actuator = self.actuDict[uuid]
 				currT = self.now()
 				currVal, newSetTime = actuator.get_latest_value(self.now())
-				self.logger.debug("ack: uploadTime: %s, downloadTime: %s", str(uploadedTimeList[idx]), str(newSetTime))
+				logging.debug("ack: uploadTime: %s, downloadTime: %s", str(uploadedTimeList[idx]), str(newSetTime))
 				if (setVal!=-1 and currVal==ackVal and newSetTime!=uploadedTimeList[idx]) or (setVal==-1 and currVal!=-1):
 					issueFlagList[idx] = True
 					seq.loc[idx, 'set_time'] = uploadedTimeList[idx]
