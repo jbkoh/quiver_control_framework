@@ -129,6 +129,13 @@ class Actuator(object):
 		else:
 			return result.tail(1).values[0], result.tail(1).index[0]
 	
+	def get_second_latest_value(self,now):
+		result = self.bdm.get_sensor_ts(self.uuid, self.sensorType, now-timedelta(hours=6), now+timedelta(minutes=10))
+		if len(result)<=1:
+			return None
+		else:
+			return result.tail(2).values[1], result.tail(2).index[1]
+	
 	def check_control_flag(self):
 		return self.controlFlag
 

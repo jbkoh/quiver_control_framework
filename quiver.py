@@ -9,7 +9,6 @@ from datetime import datetime, timedelta
 import ntplib
 from time import ctime
 import csv
-import pymongo
 from pytz import timezone
 import json
 import time
@@ -72,7 +71,6 @@ class Quiver:
 
 	def __init__(self):
 		self.ntpClient = ntplib.NTPClient()
-		client = pymongo.MongoClient()
 		self.statColl = CollectionWrapper('status')
 		self.expLogColl = CollectionWrapper('experience_log')
 		self.ntpActivateTime = self.dummyBeginTime
@@ -87,7 +85,7 @@ class Quiver:
 
 		# Create pid file for monitoring
 		pid = str(os.getpid())
-		pidfile = "C:\\temp\\quiver.pid"
+		#pidfile = "C:\\temp\\quiver.pid"
 #		if os.path.isfile(pidfile):
 #			print "%s already exists, exiting" %pidfile
 #			sys.exit()
@@ -337,12 +335,16 @@ class Quiver:
 				actuator.set_value(setVal, setTime) #TODO: This should not work in test stage
 				logging.debug('Set a value: %s by %s', actuType, str(setVal))
 		self.ack_issue(seq)
+		logging.debug("Logging done")
 
+
+#TODO: initialIssueFlagList should be checked if is implemented correctly
 	def ack_issue(self, seq):
 		if len(seq)==0:
 			return None
 		seq.index = range(0,len(seq)) # Just to make it sure (need to remove?)
 		issueFlagList = np.array([False]*len(seq))
+		initialIssueFlagList = np.array([True]*len(seq))
 		uploadedTimeList = list()
 		resendInterval = timedelta(minutes=6)
 		maxWaitTime = resendInterval * 2
@@ -357,7 +359,11 @@ class Quiver:
 			# What if a value is reset then temporal current value is restored?
 			# Temporarily do not check the case where setVal==-1.
 			if (setVal!=-1 and latestVal != setVal):
-				raise QRError('Initial upload to BD is failed', row[1])
+				latestVal, setTime = actuator.get_second_latest_value(self.now())
+				if setVal!=-1 and latestVAl != setVal:
+					initialIssueFlagList[row[0]] = False
+					logging.error("A command is not issued initially: \n%s", repr(row[1]))
+				#raise QRError('Initial upload to BD is failed', row[1])
 			uploadedTimeList.append(setTime)
 		uploadedTimeList = np.array(uploadedTimeList)
 
@@ -367,6 +373,8 @@ class Quiver:
 		while maxWaitDatetime>=self.now(): 
 			for row in seq.iterrows():
 				idx = row[0]
+				if initialIssueFlagList[idx]==False:
+					continue
 				if issueFlagList[idx]==True:
 					continue
 				uuid = row[1]['uuid']
@@ -390,6 +398,7 @@ class Quiver:
 				if (setVal!=-1 and currVal==ackVal and newSetTime!=uploadedTimeList[idx]) or (setVal==-1 and currVal!=-1):
 					issueFlagList[idx] = True
 					seq.loc[idx, 'set_time'] = uploadedTimeList[idx]
+					logging.debug("Received a ack of a command: \n%s", repr(row[1]))
 					continue
 				now = self.now()
 				if now>=uploadedTimeList[idx]+resendInterval:
@@ -400,6 +409,7 @@ class Quiver:
 						actuator.reset_value(setVal,setTime)
 					else:
 						actuator.set_value(setVal, setTime)
+					logging.debug("Resend a command due to timeout: \n%s", repr(row[1]))
 					uploadedTimeList[idx] = setTime
 			if not (False in issueFlagList):
 				break
@@ -412,8 +422,9 @@ class Quiver:
 #		for idx, flag in enumerate(issueFlagList):
 #			if not flag:
 #				raise QRError('Some commands are unable to be uploaded', seq[idx])
-		if False in issueFlagList:
-			raise QRError('Some commands are unable to be uploaded', seq[np.logical_not(issueFlagList)])
+		if False in issueFlagList or False in initialIssueFlagList:
+			logging.error('Some commands are unable to be uploaded: %s', repr(seq[np.logical_not(issueFlagList)]+seq[np.logical_not(initialIssueFlagList)]))
+			raise QRError('Some commands are unable to be uploaded', seq[np.logical_not(issueFlagList)]+seq[np.logical_not(initialIssueFlagList)])
 
 	def reflect_an_issue_to_db(self, commDict):
 		zone = commDict['zone']
