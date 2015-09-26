@@ -6,9 +6,10 @@ class ActuatorNames:
 	heatingCommand = 'Heating Command'
 	damperCommand = 'Damper Command'
 	occupiedCoolingMinimumFlow = 'Occupied Clg Min'
-	nameList = list()
+	nameList = None
 	
 	def __init__(self):
+		self.nameList = list()
 		self.nameList.append(self.commonSetpoint)
 		self.nameList.append(self.occupiedCommand)
 		self.nameList.append(self.coolingCommand)

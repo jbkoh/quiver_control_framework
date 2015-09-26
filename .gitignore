@@ -2,7 +2,7 @@
 !.gitignore
 !*.py
 !*.txt
-!metadata/dependency_map.pkl
+!metadata/dependency_map.json
 !*/
 
 emailauth.py

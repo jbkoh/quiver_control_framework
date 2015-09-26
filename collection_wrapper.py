@@ -1,6 +1,7 @@
 import pymongo
 import threading
 import pandas as pd
+from datetime import datetime
 
 
 
@@ -99,4 +100,8 @@ class CollectionWrapper:
 	
 	def get_size(self):
 		return self.collection.find({}).count()
+	
+	def to_csv(self):
+		output = self.load_dataframe({})
+		output.to_csv('data/'+self.collectionName+'_log_'+datetime.now().isoformat().replace(':','_',10)+'.csv')
 

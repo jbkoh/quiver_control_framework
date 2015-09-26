@@ -2,7 +2,8 @@ from enum import Enum
 from abc import ABCMeta, abstractmethod
 from bd_wrapper import BDWrapper
 from datetime import datetime, timedelta
-import pickle
+#import pickle
+import json
 
 
 # default occupied command type
@@ -93,13 +94,15 @@ class Actuator(object):
 	bdm = None
 	sensorType = None
 	resetVal = None
-	depMapFile = 'metadata/dependency_map.pkl'
+	depMapFile = 'metadata/dependency_map.json'
 
 	def __init__(self, minLatency):
 # minLatency(datetime) ->
 		self.minLatency = minLatency
 		self.bdm = BDWrapper()
-		depMap = pickle.load(open(self.depMapFile, 'rb'))
+#		depMap = pickle.load(open(self.depMapFile, 'rb'))
+		with open(self.depMapFile,'rb') as fp:
+			depMap = json.load(fp)
 		if self.uuid in depMap.keys():
 			for depUuid in depMap[self.uuid]:
 				self.affectingDependencyDict[depUuid] = timedelta(minutes=10)

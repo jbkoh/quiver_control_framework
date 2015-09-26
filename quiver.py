@@ -19,7 +19,8 @@ import emailauth
 from email.mime.text import MIMEText
 import traceback
 from threading import Thread #TODO: This is for future independent NTP Thread
-import pickle
+#import pickle
+import json
 from collections import defaultdict, OrderedDict
 import requests
 
@@ -79,8 +80,8 @@ class Quiver:
 		logging.debug('Quiver initialization')
 		self.bdm = BDWrapper()
 		self.update_time_offset()
-		self.zonelist = self.csv2list('metadata/partialzonelist.csv')
-		self.depMapFile = 'metadata/dependency_map.pkl'
+		self.zonelist = self.csv2list('metadata/zonelist.csv')
+		self.depMapFile = 'metadata/dependency_map.json'
 		requests.packages.urllib3.disable_warnings()
 
 		# Create pid file for monitoring
@@ -120,7 +121,8 @@ class Quiver:
 					if uuid != depUuid:
 						depUuidMap[uuid].append(depUuid)
 
-		pickle.dump(depUuidMap, open(self.depMapFile, 'wb'))
+		with open(self.depMapFile,'w') as fp:
+			json.dump(depUuidMap, fp)
 
 	def notify_systemfault(self):
 		content = "Quiver control system bas been down at " + self.now().isoformat()
@@ -580,6 +582,9 @@ class Quiver:
 	
 	def get_currest_status(self):
 		return self.statColl.load_dataframe({'under_control':True})
+	
+	def output_exp_log(self):
+		self.expLogColl.to_csv()
 
 
 #		except Exception, e:

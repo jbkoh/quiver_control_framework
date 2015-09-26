@@ -45,6 +45,7 @@ class Runtime():
 			beforeTime = currTime
 			currTime = self.quiv.now()
 			if len(self.commandSeq)==0:
+				quiv.output_exp_log()
 				return
 
 	def top(self, filename):
