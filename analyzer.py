@@ -121,12 +121,18 @@ class Analyzer:
 	def clustering(self, inputData, dataDict):
 		fftFeat = self.feater.get_fft_features(inputData, dataDict)
 		minmaxFeat = self.feater.get_minmax_features(dataDict)
+		dtwFeat = self.feater.get_dtw_features(inputData, dataDict)
+		freqFeat = self.feater.get_freq_features(inputData, dataDict)
 		featDict = dict()
 		for zone in self.zonelist:
 			featList = list()
 			featList.append(fftFeat[zone])
 			featList.append(minmaxFeat[zone])
+			featList.append(dtwFeat[zone])
+			#featList.append(freqFeat[zone])
 			featDict[zone] = featList
+		print min(dtwFeat.values())
+		print featDict['RM-4132']
 		return self.clust.cluster_kmeans(featDict)
 
 

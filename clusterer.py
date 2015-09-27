@@ -2,6 +2,7 @@ from sklearn.cluster import KMeans
 from sklearn import datasets
 import csv
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 
 
@@ -21,18 +22,30 @@ class Clusterer():
 		return outputList
 
 	def cluster_kmeans(self, featDict):
-		est= KMeans(n_clusters=2, init='k-means++', max_iter=1000)
+		est= KMeans(n_clusters=4, init='k-means++', max_iter=1000)
 		est.fit(featDict.values())
 		labels = est.labels_
 		print featDict.keys()
 		print featDict
 		print labels
+		print labels[featDict.keys().index('RM-4132')]
 
 		fig, axis = plt.subplots(1,1)
 		x = list()
 		y = list()
-		for val in featDict.values():
+		z = list()
+		for zone, val in featDict.iteritems():
+			if zone=='RM-4132':
+				continue
 			x.append(val[0])
 			y.append(val[1])
+			z.append(val[2])
 		axis.scatter(x,y)
+		axis.scatter(featDict['RM-4132'][0],featDict['RM-4132'][1],color='r')
+
+		fig = plt.figure()
+		ax = fig.add_subplot(111,projection='3d')
+		ax.scatter(x,y,z)
+		ax.scatter(featDict['RM-4132'][0], featDict['RM-4132'][1], featDict['RM-4132'][2], color='r')
+
 		plt.show()
