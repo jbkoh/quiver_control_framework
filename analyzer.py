@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 import pickle
 import csv
 import json
+from quiver import QRError
 
 
 class Analyzer:
@@ -105,9 +106,10 @@ class Analyzer:
 		for zone in self.zonelist:
 			zoneDict = dict()
 			for actuType in self.actuNames.nameList+self.sensorNames.nameList:
-				if actuType == 'Zone Temperature' and zone=='RM-1102':
-					pass
-				uuid = self.get_actuator_uuid(zone, actuType)
+				try:
+					uuid = self.get_actuator_uuid(zone, actuType)
+				except QRError:
+					continue
 				data = self.receive_a_sensor(zone, actuType, beginTime, endTime)
 				zoneDict[actuType] = data
 			dataDict[zone] = zoneDict
