@@ -1,9 +1,10 @@
 class SensorNames:
 	zoneTemperature = 'Zone Temperature'
 	actualSupplyFlow = 'Actual Supply Flow'
-	nameList = list()
+	nameList = None
 	
 	def __init__(self):
+		self.nameList = list()
 		self.nameList.append(self.zoneTemperature)
 		self.nameList.append(self.actualSupplyFlow)
 	def __contains__(self, given):

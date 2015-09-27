@@ -2,6 +2,8 @@ from bd_wrapper import BDWrapper
 from collection_wrapper import CollectionWrapper
 from actuator_names import ActuatorNames
 from sensor_names import SensorNames
+from feature_extractor import FeatureExtractor
+from clusterer import Clusterer
 
 import pandas as pd
 import numpy as np
@@ -9,21 +11,27 @@ from datetime import datetime, timedelta
 #import sklearn.cluster.KMeans as KMeans
 import pickle
 import csv
-
+import json
 
 
 class Analyzer:
 	bdm = None
 	expLogColl = None
 	timeGran = timedelta(minutes=5)
-	actuNames = ActuatorNames()
-	sensorNames = SensorNames()
+	actuNames = None
+	sensorNames = None
 	zonelist = None
+	feater = None
+	clust = None
 	
 	def __init__(self):
+		self.actuNames = ActuatorNames()
+		self.sensorNames = SensorNames()
 		self.bdm = BDWrapper()
 		self.expLogColl = CollectionWrapper('experience_log')
 		self.zonelist = self.csv2list('metadata/partialzonelist.csv')
+		self.feater = FeatureExtractor()
+		self.clust = Clusterer()
 	
 	def csv2list(self, filename):
 		outputList = list()
@@ -69,6 +77,10 @@ class Analyzer:
 				newVal = leftVal
 			elif rightVal!=None and leftVal==None:
 				newVal = rightVal
+			elif tp==leftIdx:
+				newVal = leftVal
+			elif tp==rightIdx:
+				newVal = rightVal
 			elif rightVal!=None and leftVal!=None:
 				leftDist = (tp - leftIdx).total_seconds()
 				rightDist = (rightIdx - tp).total_seconds()
@@ -93,9 +105,27 @@ class Analyzer:
 		for zone in self.zonelist:
 			zoneDict = dict()
 			for actuType in self.actuNames.nameList+self.sensorNames.nameList:
+				if actuType == 'Zone Temperature' and zone=='RM-1102':
+					pass
 				uuid = self.get_actuator_uuid(zone, actuType)
 				data = self.receive_a_sensor(zone, actuType, beginTime, endTime)
 				zoneDict[actuType] = data
 			dataDict[zone] = zoneDict
 
-		pickle.dump(dataDict, open(filename, 'wb'))
+		with open(filename, 'wb') as fp:
+			pickle.dump(dataDict, fp)
+#			json.dump(dataDict,fp)
+
+	def clustering(self, inputData, dataDict):
+		fftFeat = self.feater.get_fft_features(inputData, dataDict)
+		minmaxFeat = self.feater.get_minmax_features(dataDict)
+		featDict = dict()
+		for zone in self.zonelist:
+			featList = list()
+			featList.append(fftFeat[zone])
+			featList.append(minmaxFeat[zone])
+			featDict[zone] = featList
+		return self.clust.cluster_kmeans(featDict)
+
+
+
