@@ -4,6 +4,7 @@ import csv
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
+import pprint
 
 
 class Clusterer():
@@ -26,7 +27,8 @@ class Clusterer():
 		est.fit(featDict.values())
 		labels = est.labels_
 		print featDict.keys()
-		print featDict
+		pp = pprint.PrettyPrinter(indent=4)
+		pp.pprint(featDict)
 		print labels
 		print labels[featDict.keys().index('RM-4132')]
 

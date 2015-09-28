@@ -38,13 +38,18 @@ class FeatureExtractor():
 	
 	def get_fft_features(self, inputData, dataDict):
 		fftDict = dict()
+		idxDict = dict()
 		distDict = dict()
 		for zone, data in dataDict.iteritems():
-			fftDict[zone] = np.fft.rfft(self.normalize(data))[:10]
-		inputfft = np.fft.rfft(self.normalize(inputData))[:10]
+			fftDict[zone] = np.fft.rfft(self.normalize(data))[1:10]
+			idxDict[zone] = np.where(fftDict[zone]==max(fftDict[zone]))[0][0] 
+			
+		inputfft = np.fft.rfft(self.normalize(inputData))[1:10]
+		ipnutIdx = np.where(inputfft==max(inputfft))[0][0]
 		for zone, data in fftDict.iteritems():
-			distDict[zone] = np.linalg.norm(fftDict[zone][1:]-inputfft[1:])
-#			distDict[zone] = dtw.dtw(fftDict[zone][1:],inputfft[1:])
+#			distDict[zone] = np.linalg.norm(fftDict[zone][1:]-inputfft[1:])
+#			distDict[zone] = dtw.dtw(fftDict[zone][1:10],inputfft[1:10])
+			distDict[zone] = idxDict[zone]
 #			print zone, distDict[zone][0]
 		return distDict
 

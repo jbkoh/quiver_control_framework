@@ -1,5 +1,7 @@
 import pickle
+import pdb
 from analyzer import Analyzer
+import sys
 
 with open('data/2015-09-23T1.pkl','rb') as fp:
 	dataDict = pickle.load(fp)
@@ -10,5 +12,9 @@ for zone, value in dataDict.iteritems():
 
 
 anal = Analyzer()
-featDict = anal.clustering(dataDict['RM-4132']['Common Setpoint'], ztDict)
+if sys.argv[1]=='1':
+	pdb.run("featDict = anal.clustering(dataDict['RM-4132']['Common Setpoint'], ztDict)")
+else:
+	featDict = anal.clustering(dataDict['RM-4132']['Common Setpoint'], ztDict)
+
 print featDict

@@ -131,7 +131,6 @@ class Analyzer:
 			featList.append(dtwFeat[zone])
 			#featList.append(freqFeat[zone])
 			featDict[zone] = featList
-		print min(dtwFeat.values())
 		print featDict['RM-4132']
 		return self.clust.cluster_kmeans(featDict)
 
