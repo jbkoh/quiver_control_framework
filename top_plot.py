@@ -1,11 +1,12 @@
 import quiver_plot
 reload(quiver_plot)
 from quiver_plot import QuiverPlotter
+import sys
 
 from datetime import datetime
 
 zone = sys.argv[1]
-timeFormat = '%Y%m%dT%H%M%S'
+timeFormat = '%Y-%m-%dT%H:%M:%S'
 beginTime = datetime.strptime(sys.argv[2], timeFormat)
 endTime = datetime.strptime(sys.argv[3], timeFormat)
 qp = QuiverPlotter()
