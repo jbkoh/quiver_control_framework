@@ -1,6 +1,6 @@
 import csv	
 
-def csv2list(self, filename):
+def csv2list(filename):
 	outputList = list()
 	with open(filename, 'r') as fp:
 		reader = csv.reader(fp, delimiter=',')
