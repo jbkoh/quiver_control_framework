@@ -284,6 +284,8 @@ def plot_multiple_2dline(x, ys, xlabel=None, ylabel=None, xtick=None, xtickLabel
 		if dataLabels:
 			dataLabel = dataLabels[dataLabelIdx]
 			dataLabelIdx += 1
+		else:
+			dataLabel = None
 		axis.plot(x,ys[i], label=dataLabel)
 	if dataLabels:
 		axis.legend(fontsize=7, loc='best')
@@ -306,6 +308,7 @@ def plot_multiple_2dline(x, ys, xlabel=None, ylabel=None, xtick=None, xtickLabel
 #	if dataLabels: 
 #		plt.legend(handles=plotList, fontsize=7)
 
+	plt.show()
 	return fig
 
 def plot_yy_bar(dataSeries, xlabel=None, ylabel=None, xtickRange=None, xtickTag=None, ytickRange=None, ytickTag=None, title=None, stdSeries=None, axis=None, fig=None, clist=None, dataLabels=None, yerrs=None, ylim=None, linewidth=None):

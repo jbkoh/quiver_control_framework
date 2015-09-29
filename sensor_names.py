@@ -1,6 +1,7 @@
 class SensorNames:
 	zoneTemperature = 'Zone Temperature'
 	actualSupplyFlow = 'Actual Supply Flow'
+	damperPosition= 'Damper Position'
 	nameList = None
 	
 	def __init__(self):
