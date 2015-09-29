@@ -2,6 +2,7 @@ from actuator_names import ActuatorNames
 import metaactuators
 from collection_wrapper import *
 from bd_wrapper import BDWrapper
+import basic
 
 import pandas as pd
 import numpy as np
@@ -80,7 +81,7 @@ class Quiver:
 		logging.debug('Quiver initialization')
 		self.bdm = BDWrapper()
 		self.update_time_offset()
-		self.zonelist = self.csv2list('metadata/zonelist.csv')
+		self.zonelist = basic.csv2list('metadata/zonelist.csv')
 		self.depMapFile = 'metadata/dependency_map.json'
 		requests.packages.urllib3.disable_warnings()
 
@@ -97,13 +98,13 @@ class Quiver:
 	def __del__(self):
 		pass
 
-	def csv2list(self, filename):
-		outputList = list()
-		with open(filename, 'r') as fp:
-			reader = csv.reader(fp, delimiter=',')
-			for row in reader:
-				outputList.append(row[0])
-		return outputList
+#	def csv2list(self, filename):
+#		outputList = list()
+#		with open(filename, 'r') as fp:
+#			reader = csv.reader(fp, delimiter=',')
+#			for row in reader:
+#				outputList.append(row[0])
+#		return outputList
 
 	def init_dependency_map(self):
 		depZoneMap = defaultdict(list)

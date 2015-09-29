@@ -59,7 +59,7 @@ class QuiverPlotter:
 					plotObjList.append(plotObj)
 #				axes[idx].legend(handles=plotObjList, fontsize=8, loc='best')
 			#	axes[idx].legend(plotObjList, actuType)
-				axes[idx].legend()
+				axes[idx].legend(loc='upper center', bbox_to_anchor=(0.5,-0.1),ncol=3)
 					
 
 		fig.set_size_inches((10,12))

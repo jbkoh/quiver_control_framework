@@ -23,7 +23,7 @@ class Clusterer():
 		return outputList
 
 	def cluster_kmeans(self, featDict):
-		est= KMeans(n_clusters=4, init='k-means++', max_iter=300)
+		est= KMeans(n_clusters=6, init='k-means++', max_iter=300)
 		est.fit(featDict.values())
 		labels = est.labels_
 		print featDict.keys()

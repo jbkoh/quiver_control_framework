@@ -3,7 +3,7 @@ import pdb
 from analyzer import Analyzer
 import sys
 
-with open('data/2015-09-26T1.pkl','rb') as fp:
+with open('data/2015-09-28T1.pkl','rb') as fp:
 #with open('data/2015-09-23T1.pkl','rb') as fp:
 	dataDict = pickle.load(fp)
 
