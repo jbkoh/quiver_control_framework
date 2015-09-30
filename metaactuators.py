@@ -193,6 +193,10 @@ class ActualSupplyFlowSP(Actuator):
 	def __init__(self, name, uuid, minVal, maxVal, zone):
 		self.name = name
 		self.uuid = uuid
+		#TODO: set the max and min by those values
+		maxflowUuid = self.bdm.get_sensor_uuids({'room':zone, 'template':'Cooling Max Flow'})[0]
+		minHeatingFlowUuid = self.bdm.get_sensor_uuids({'room':zone, 'tempalte':'Occupied Htg Flow'})[0]
+		minCoolingFlowUuid = self.bdm.get_sensor_uuids({'room':zone, 'template':'Occupied Clg Min'})[0]
 		super(ActualSupplyFlowSP, self).__init__(timedelta(minutes=10))
 		self.inputType = master_actuator.FlowType(minVal, maxVal)
 		self.zone = zone

@@ -74,7 +74,7 @@ class Quiver:
 	def __init__(self):
 		self.ntpClient = ntplib.NTPClient()
 		self.statColl = CollectionWrapper('status')
-		self.expLogColl = CollectionWrapper('experience_log')
+		self.expLogColl = CollectionWrapper('experiment_log')
 		self.ntpActivateTime = self.dummyBeginTime
 		logging.basicConfig(filename='log/debug'+datetime.now().isoformat()[0:-7].replace(':','_') + '.log',level=logging.DEBUG, format='%(asctime)s [%(levelname)s] %(message)s')
 		#logger = logging.getLogger()
@@ -481,8 +481,8 @@ class Quiver:
 
 	# rollback does not rollback to original state but rollback by "-1"
 	def emergent_rollback(self):
-		queryAll = {}
-		resetQueue = self.statColl.pop_dataframe(queryAll)
+		queryAll = {"under_control":True}
+		resetQueue = self.statColl.load_dataframe(queryAll)
 		resetQueue = resetQueue.sort(columns='set_time', axis='index')
 		maxConcurrentResetNum = 10
 		resetInterval = 10*60 # 10 minutes
@@ -532,6 +532,7 @@ class Quiver:
 			if not insertedFlag:
 				resetSeq[lastKey][uuid] = row[1]
 
+#TODO: need to add checking acknowledgement
 		# Rollback
 		for k, l in resetSeq.iteritems():
 			for stat in l.values():
@@ -550,37 +551,6 @@ class Quiver:
 				actuator.reset_value(setVal, setTime)
 			time.sleep(resetInterval)
 
-#		# Construct reset sequence (dict of list. dict's key is target time)
-#		#TODO: Filter resetQueue by removing redundant reset signals
-#		now = self.now()
-#		while len(resetQueue)>0:
-#			currResetList = dict()
-#			for row in resetQueue.iterrows():
-#				uuid = row[1]['uuid']
-#				actuator = self.actuDict[uuid]
-#				depFlag = False
-#				for uuid in actuator.get_dependent_actu_list():
-#					if (uuid in logQuery['uuid'][logQuery['reset_time']>=now-actuator.minLatencty]) or (uuid in currResetList):
-#						depFlag = True
-#						break
-#				if not depFlag:
-#					currResetList[uuid] = row[1]['reset_value']
-#					resetQueue = resetQueue.drop(row[2])
-#			now = now + timedelta(minutes=10)
-#			resetSeq.append(currResetList)
-#
-#		# Reset all the sensors registered at reset_queue
-#		for currResetList in resetSeq:
-#			for uuid, resetVal in currResetList.iteritems():
-#				actuator = self.actuDict[uuid]
-#				now = self.now()
-#				origVal = actuator.get_latest_value(now)
-#				expLogRow = ExpLogRow(uuid, actuator.name, now, setVal=actuator.resetVal, origVal=origVal)
-#				self.expLogColl.store_row(expLogRow)
-#				actuator.reset_value(resetVal)
-#			# TODO: I have to acknowledge that the value is reset. However, how can I check if the reset value is -1?? How can I know if the value is reset or just changed?
-#			time.sleep(self.minResetLatency)
-	
 	def get_currest_status(self):
 		return self.statColl.load_dataframe({'under_control':True})
 	
