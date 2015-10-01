@@ -382,6 +382,7 @@ class Quiver:
 					continue
 				uuid = row[1]['uuid']
 				setVal = row[1]['set_value']
+				origVal = row[1]['original_value']
 				actuator = self.actuDict[uuid]
 
 				#if setVal==-1: #TODO: This is temporary version need to check
@@ -405,6 +406,7 @@ class Quiver:
 					continue
 				now = self.now()
 				if now>=uploadedTimeList[idx]+resendInterval:
+					actuator.set_value(origVal, uploadedTimeList[idx])
 					setTime = self.now()
 					if setVal==-1:
 						if actuType in [self.actuNames.commonSetpoint]:

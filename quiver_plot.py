@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 from datetime import datetime, timedelta
 from pytz import timezone
+from quiver import QRError
 
 
 class QuiverPlotter:

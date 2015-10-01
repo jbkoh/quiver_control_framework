@@ -18,7 +18,8 @@ from quiver import QRError
 class Analyzer:
 	bdm = None
 	expLogColl = None
-	timeGran = timedelta(minutes=5)
+	#timeGran = timedelta(minutes=5)
+	timeGran = timedelta(minutes=2)
 	actuNames = None
 	sensorNames = None
 	zonelist = None

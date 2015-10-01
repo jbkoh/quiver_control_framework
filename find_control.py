@@ -1,14 +1,16 @@
 import basic
 from actuator_names import ActuatorNames
 from sensor_names import SensorNames
-import pickle
+from bd_wrapper import BDWrapper
 
+import pickle
 import pandas as pd
 import plotter
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.svm import SVR
 from mpl_toolkits.mplot3d import Axes3D
+from datetime import datetime, timedelta
 
 
 
@@ -18,12 +20,14 @@ class FindControl:
 	testlist = None
 	actuNames = None
 	sensorNames = None
+	bdm = None
 
 	def __init__ (self):
 		self.zonelist = basic.csv2list('metadata/partialzonelist.csv')
 		self.testlist = ['RM-4132']
 		self.actuNames = ActuatorNames()
 		self.sensorNames = SensorNames()
+		self.bdm = BDWrapper()
 	
 	def make_dataframe(self, filename):
 		data = dict()
@@ -57,6 +61,67 @@ class FindControl:
 
 			plotter.plot_multiple_2dline(range(0,len(df[sensorList[maxIndices[0]]])), plotData, dataLabels=plotLabel)
 
+# Input: data1(series), data2(series), Output: arranged data2 (list)
+	def data_allign(self, data1, data2, direction):
+		output = list()
+		test = list()
+		for tp in data1.index:
+			if direction=='right':
+				newData = data2[data2.index>tp].head(1)
+			elif direction=='left':
+				newData = data2[data2.index<=tp].tail(1)
+			else:
+				print "direction value is wrong"
+				return None 
+
+			if newData.empty:
+				if direction=='right':
+					newData = data2[data2.index<=tp].tail(1)
+				elif direction=='left':
+					newData = data2[data2.index>=tp].head(1)
+				#TODO: Won't it make an error? Will there be a datum always?
+			print data1[tp], newData
+			test.append(newData)
+			output.append(float(newData))
+		return output
+
+
+	def download_control_data(self):
+		reqList = list()
+		reqList.append(('RM-4132', datetime(2015,9,29,21,01), datetime(2015,9,30,2,59)))
+		reqList.append(('RM-2108', datetime(2015,9,29,21,01), datetime(2015,9,30,2,59)))
+		acsDF = pd.DataFrame({'acs':[],'cs':[],'oc':[]})
+		for req in reqList:
+			zoneDict = dict()
+			for sensorType in self.actuNames.nameList+self.sensorNames.nameList:
+				uuid = self.bdm.get_sensor_uuids({'room':req[0], 'template':sensorType})[0]
+				rawData = self.bdm.get_sensor_ts(uuid, 'PresentValue', req[1], req[2])
+				zoneDict[sensorType] = rawData
+			
+			# Actual Cooling Setpoint Data Allignment
+			acsSeries = zoneDict[self.actuNames.actualCoolingSetpoint]
+			csSeries = zoneDict[self.actuNames.commonSetpoint]
+			ocSeries = zoneDict[self.actuNames.occupiedCommand]
+
+			csList = csSeries.tolist()
+			acsList = self.data_allign(csSeries, acsSeries, 'right')
+			ocList = self.data_allign(csSeries, ocSeries, 'left')
+			if not (len(csList)==len(acsList) and len(csList)==len(ocList)):
+				print "allignment is wrong"
+				return None
+			newDF = pd.DataFrame({'acs':acsList, 'cs':csList, 'oc':ocList})
+			acsDF = pd.concat([acsDF, newDF])
+			
+			ocList = ocSeries.tolist()
+			csList = self.data_allign(ocSeries, csSeries, 'left')
+			acsList = self.data_allign(ocSeries, acsSeries, 'right')
+			newDF = pd.DataFrame({'acs':acsList, 'cs':csList, 'oc':ocList})
+			acsDF = pd.concat([acsDF, newDF])
+
+		pass
+
+
+
 	def merge_data(self, data1, dataList):
 		dataDict = dict()
 		for key in data1.iterkeys():
@@ -83,20 +148,23 @@ class FindControl:
 
 	def organize_data(self):
 		filenameList = list()
-		filenameList.append('data/2015-09-28T1.pkl')
-		filenameList.append('data/2015-09-26T1.pkl')
+		filenameList.append('data/2015-09-29T2.pkl')
+		filenameList.append('data/2015-09-29T2.pkl')
 
 		dataList = list()
-		for filename in filenameList:
+		for idx, filename in enumerate(filenameList):
 			with open(filename, 'rb') as fp:
 				data = pickle.load(fp)
-			dataList.append(self.arrange_data(data['RM-4132']))
+			if idx==0:
+				dataList.append(self.arrange_data(data['RM-4132']))
+			else:
+				dataList.append(self.arrange_data(data['RM-2108']))
+
 		dataDict = self.merge_data(dataList[0], dataList[:-1])
 
 		for key, data in dataDict.iteritems():
 			print key
 			self.fit_data(data[key], data.drop(key,axis=1))
-	
 	
 	def fit_data(self, y, xs):
 		svr_rbf = SVR(kernel='rbf', C=1e3, gamma=0.1)
