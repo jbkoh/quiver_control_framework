@@ -57,7 +57,7 @@ class Analyzer:
 		else:
 			return uuids[0]
 
-	def normalize_data(self, rawData, beginTime, endTime):
+	def normalize_data_avg(self, rawData, beginTime, endTime):
 		procData = pd.Series({beginTime:float(rawData[0])})
 		tp = beginTime
 		while tp<=endTime:
@@ -94,15 +94,48 @@ class Analyzer:
 			procData = procData.append(newData)
 		return procData
 
-	def receive_a_sensor(self, zone, actuType, beginTime, endTime):
+	def normalize_data_nextval(self, rawData, beginTime, endTime):
+		procData = pd.Series({beginTime:float(rawData[0])})
+		tp = beginTime
+		while tp<=endTime:
+			tp = tp+self.timeGran
+			leftSeries = rawData[:tp]
+			if len(leftSeries)>0:
+				idx = len(leftSeries)-1
+				leftVal = leftSeries[idx]
+				leftIdx = leftSeries.index[idx]
+			else:
+				leftVal = None
+			rightSeries = rawData[tp:]
+			if len(rightSeries)>0:
+				rightVal = rightSeries[0]
+				rightIdx = rightSeries.index[0]
+			else:
+				rightVal = None
+
+			if rightVal != None:
+				newVal = rightVal
+			else:
+				newVal = leftVal
+
+			newData = pd.Series({tp:newVal})
+			procData = procData.append(newData)
+		return procData
+
+	def receive_a_sensor(self, zone, actuType, beginTime, endTime, normType):
 		uuid = self.get_actuator_uuid(zone, actuType)
 		rawData = self.bdm.get_sensor_ts(uuid, 'PresentValue', beginTime, endTime)
-		procData = self.normalize_data(rawData, beginTime, endTime)
+		if normType=='avg':
+			procData = self.normalize_data_avg(rawData, beginTime, endTime)
+		elif normType=='nextval':
+			procData = self.normalize_data_nextval(rawData, beginTime, endTime)
+		else:
+			procData = None
+
 		return procData
-	
-	def receive_entire_sensors(self, beginTime, endTime):
+
+	def receive_entire_sensors_notstore(self, beginTime, endTime, normType):
 		#TODO: Should be parallelized here
-		filename='data/'+beginTime.isoformat()[0:-7].replace(':','_') + '.pkl'
 		dataDict = dict()
 		for zone in self.zonelist:
 			zoneDict = dict()
@@ -111,10 +144,14 @@ class Analyzer:
 					uuid = self.get_actuator_uuid(zone, actuType)
 				except QRError:
 					continue
-				data = self.receive_a_sensor(zone, actuType, beginTime, endTime)
+				data = self.receive_a_sensor(zone, actuType, beginTime, endTime, normType)
 				zoneDict[actuType] = data
 			dataDict[zone] = zoneDict
-
+		return dataDict
+	
+	def receive_entire_sensors(self, beginTime, endTime, filename, normType):
+#		filename='data/'+beginTime.isoformat()[0:-7].replace(':','_') + '.pkl'
+		dataDict = self.receive_entire_sensors_notstore(beginTime, endTime, normType)
 		with open(filename, 'wb') as fp:
 			pickle.dump(dataDict, fp)
 #			json.dump(dataDict,fp)

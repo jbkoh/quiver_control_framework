@@ -2,6 +2,7 @@ import basic
 from actuator_names import ActuatorNames
 from sensor_names import SensorNames
 from bd_wrapper import BDWrapper
+from analyzer import Analyzer
 
 import pickle
 import pandas as pd
@@ -21,13 +22,15 @@ class FindControl:
 	actuNames = None
 	sensorNames = None
 	bdm = None
+	anal = None
 
 	def __init__ (self):
 		self.zonelist = basic.csv2list('metadata/partialzonelist.csv')
-		self.testlist = ['RM-4132']
+		self.testlist = ['RM-4132', 'RM-2150', 'RM-2108']
 		self.actuNames = ActuatorNames()
 		self.sensorNames = SensorNames()
 		self.bdm = BDWrapper()
+		self.anal = Analyzer()
 	
 	def make_dataframe(self, filename):
 		data = dict()
@@ -88,8 +91,8 @@ class FindControl:
 
 	def download_control_data(self):
 		reqList = list()
-		reqList.append(('RM-4132', datetime(2015,9,29,21,01), datetime(2015,9,30,2,59)))
-		reqList.append(('RM-2108', datetime(2015,9,29,21,01), datetime(2015,9,30,2,59)))
+		reqList.append(('RM-4132', datetime(2015,9,29,12,01), datetime(2015,9,30,2,59)))
+		reqList.append(('RM-2108', datetime(2015,9,29,12,01), datetime(2015,9,30,2,59)))
 		acsDF = pd.DataFrame({'acs':[],'cs':[],'oc':[]})
 		for req in reqList:
 			zoneDict = dict()
@@ -118,8 +121,6 @@ class FindControl:
 			newDF = pd.DataFrame({'acs':acsList, 'cs':csList, 'oc':ocList})
 			acsDF = pd.concat([acsDF, newDF])
 
-		pass
-
 
 
 	def merge_data(self, data1, dataList):
@@ -147,18 +148,23 @@ class FindControl:
 		return output
 
 	def organize_data(self):
+		#rawDataDict = self.anal.receive_entire_sensors_notstore(datetime(2015,9,29),datetime(2015,9,30,6))
 		filenameList = list()
-		filenameList.append('data/2015-09-29T2.pkl')
-		filenameList.append('data/2015-09-29T2.pkl')
+		filename = 'data/controldata_nextval.pkl'
+		with open(filename,'rb') as fp:
+			rawDataDict = pickle.load(fp)
 
 		dataList = list()
-		for idx, filename in enumerate(filenameList):
-			with open(filename, 'rb') as fp:
-				data = pickle.load(fp)
-			if idx==0:
-				dataList.append(self.arrange_data(data['RM-4132']))
-			else:
-				dataList.append(self.arrange_data(data['RM-2108']))
+#		for idx, filename in enumerate(filenameList):
+#			with open(filename, 'rb') as fp:
+#				data = pickle.load(fp)
+#			if idx==0:
+#				dataList.append(self.arrange_data(data['RM-4132']))
+#			else:
+#				dataList.append(self.arrange_data(data['RM-2108']))
+
+		for zone in self.testlist:
+			dataList.append(self.arrange_data(rawDataDict[zone]))
 
 		dataDict = self.merge_data(dataList[0], dataList[:-1])
 
@@ -168,9 +174,14 @@ class FindControl:
 	
 	def fit_data(self, y, xs):
 		svr_rbf = SVR(kernel='rbf', C=1e3, gamma=0.1)
-		y_rbf = svr_rbf.fit(xs, y).predict(xs)
+		fitted = svr_rbf.fit(xs,y)
+		y_rbf = fitted.predict(xs)
 		fig = plt.figure()
-		ax = fig.add_subplot(111,projection='3d')
-		ax.scatter(xs[xs.keys()[0]],xs[xs.keys()[0]],y,c='k')
+		ax1 = fig.add_subplot(1,2,1,projection='3d')
+		ax1.scatter(xs[xs.keys()[0]],xs[xs.keys()[0]],y,c='k')
+		#plt.show()
+		#fig2 = plt.figure()
+		ax2 = fig.add_subplot(1,2,2,projection='3d')
+		ax2.scatter(xs[xs.keys()[0]],xs[xs.keys()[0]],y_rbf,c='k')
 		plt.show()
 		pass

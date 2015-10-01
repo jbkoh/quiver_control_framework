@@ -363,7 +363,7 @@ class Quiver:
 			# Temporarily do not check the case where setVal==-1.
 			if (setVal!=-1 and latestVal != setVal):
 				latestVal, setTime = actuator.get_second_latest_value(self.now())
-				if setVal!=-1 and latestVAl != setVal:
+				if setVal!=-1 and latestVal != setVal:
 					initialIssueFlagList[row[0]] = False
 					logging.error("A command is not issued initially: \n%s", repr(row[1]))
 				#raise QRError('Initial upload to BD is failed', row[1])
@@ -523,21 +523,30 @@ class Quiver:
 				continue
 			actuator = self.actuDict[uuid]
 			lastKey = 0
+			now = self.now()
+			row[1]['original_value'] = actuator.get_value(now-timedelta(hours=1), now).tail(1)[0]
 			insertedFlag = False
 			for k,l in resetSeq.iteritems():
 				depList = actuator.get_dependent_actu_list()
 				if not bool(set(depList) & set(l.keys())) and len(l)<maxConcurrentResetNum:
-					resetSeq[k][uuid] = row[1]
+					resetSeq[k][uuid] = row[1].to_dict()
 					insertedFlag = True
 				lastKey = k
 			lastKey += 1
 			if not insertedFlag:
-				resetSeq[lastKey][uuid] = row[1]
+				resetSeq[lastKey][uuid] = row[1].to_dict()
+
+		for key, stats in resetSeq.iteritems():
+			oneResetSeq = pd.DataFrame()
+			for uuid, stat in stats.iteritems():
+				oneResetSeq = pd.concat([oneResetSeq, pd.DataFrame(stat, index=[0])])
+			resetSeq[key] = oneResetSeq
 
 #TODO: need to add checking acknowledgement
 		# Rollback
 		for k, l in resetSeq.iteritems():
-			for stat in l.values():
+			for key, stat in l.iterrows():
+		#		stat = row[1]
 				uuid = stat['uuid']
 				name = stat['name']
 				actuType = stat['actuator_type']
@@ -545,12 +554,14 @@ class Quiver:
 					setVal = stat['reset_value']
 				else:
 					setVal = -1
+				
 				actuator = self.actuDict[uuid]
 				now = self.now()
-				origVal = actuator.get_value(now-timedelta(hours=1), now).tail(1)[0]
+				origVal = stat['original_value']
 				setTime = self.now()
 				expLogRow = ExpLogRow(uuid, name, setTime=setTime, setVal=setVal, origVal=origVal)
 				actuator.reset_value(setVal, setTime)
+			self.ack_issue(l)
 			time.sleep(resetInterval)
 
 	def get_currest_status(self):
