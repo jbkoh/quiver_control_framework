@@ -210,29 +210,44 @@ class FindControl:
 	
 	def fit_data(self, y, xs, testy, testxs):
 		#svr_rbf = SVR(kernel='rbf', C=1e3, gamma=0.1)
-		svr_rbf = SVR()
+		svr_rbf = SVR(kernel='rbf')
+		#svr_rbf = SVR()
 		fitted = svr_rbf.fit(xs,y)
 		y_rbf = fitted.predict(xs)
 		fig = plt.figure()
-		ax1 = fig.add_subplot(2,2,1,projection='3d')
-		ax1.scatter(xs[xs.keys()[0]],xs[xs.keys()[1]],y,c='k')
-		#plt.show()
-		#fig2 = plt.figure()
-		ax2 = fig.add_subplot(2,2,2,projection='3d')
-		ax2.scatter(xs[xs.keys()[0]],xs[xs.keys()[1]],y_rbf,c='k')
+		#ax1 = fig.add_subplot(2,2,1,projection='3d')
+		#ax1.scatter(xs[xs.keys()[0]],xs[xs.keys()[1]],y,c='k')
+		
+		#ax2 = fig.add_subplot(2,2,2,projection='3d')
+		#ax2.scatter(xs[xs.keys()[0]],xs[xs.keys()[1]],y_rbf,c='k')
 
-		test_y_rbf = fitted.predict(testxs)
-		ax3 = fig.add_subplot(2,2,3,projection='3d')
-		ax3.scatter(testxs[testxs.keys()[0]],testxs[testxs.keys()[1]],testy,c='k')
+		testy_rbf = fitted.predict(testxs)
+		#ax3 = fig.add_subplot(2,2,3,projection='3d')
+		#ax3.scatter(testxs[testxs.keys()[0]],testxs[testxs.keys()[1]],testy,c='k')
 
-		ax4 = fig.add_subplot(2,2,4,projection='3d')
-		ax4.scatter(testxs[testxs.keys()[0]],testxs[testxs.keys()[1]],test_y_rbf,c='k')
-		rmse = sqrt(mean_squared_error(testy, test_y_rbf))
+		#ax4 = fig.add_subplot(2,2,4,projection='3d')
+		#ax4.scatter(testxs[testxs.keys()[0]],testxs[testxs.keys()[1]],testy_rbf,c='k')
+		rmse = sqrt(mean_squared_error(testy, testy_rbf))
 		normRmse = rmse/np.mean(testy)
+
+		ax1 = fig.add_subplot(121)
+		plotList = list()
+		plotList.append(ax1.plot(y, c='b', label='original'))
+		plotList.append(ax1.plot(y_rbf, c='r', label='fitted'))
+		ax1.set_title('Learning Data')
+		ax1.legend()
+		plotList = list()
+		ax2 = fig.add_subplot(122)
+		plotList.append(ax2.plot(testy, c='b', label='original'))
+		plotList.append(ax2.plot(testy_rbf, c='r', label='fitted'))
+		ax2.set_title('Test Data')
+		ax2.legend()
+
+		
 		print rmse, normRmse
 		print '\n'
 
-		#plt.show()
+		plt.show()
 
 		
 		pass
