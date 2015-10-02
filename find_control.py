@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 from sklearn.svm import SVR
 from mpl_toolkits.mplot3d import Axes3D
 from datetime import datetime, timedelta
+from math import sqrt
+from sklearn.metrics import mean_squared_error
 
 
 
@@ -150,9 +152,23 @@ class FindControl:
 	def organize_data(self):
 		#rawDataDict = self.anal.receive_entire_sensors_notstore(datetime(2015,9,29),datetime(2015,9,30,6))
 		filenameList = list()
-		filename = 'data/controldata_nextval.pkl'
-		with open(filename,'rb') as fp:
-			rawDataDict = pickle.load(fp)
+		#filename = 'data/controldata_nextval.pkl'
+		#filename = 'data/4132_2014.pkl'
+		filename = 'data/3152_09302015.pkl'
+		filenameList.append(filename)
+		filename = 'data/3109_09302015.pkl'
+		filenameList.append(filename)
+		filename = 'data/2150_09132015.pkl'
+		filenameList.append(filename)
+		filename = 'data/2148_01012015.pkl'
+		filenameList.append(filename)
+		fig = plt.figure()
+		ax = fig.add_subplot(111,projection='3d')
+
+		testFilenameList = list()
+		testFilenameList.append('data/2150_01012015.pkl')
+		testFilenameList.append('data/4148_09012015.pkl')
+		testFilenameList.append('data/2112_09012015.pkl')
 
 		dataList = list()
 #		for idx, filename in enumerate(filenameList):
@@ -163,25 +179,60 @@ class FindControl:
 #			else:
 #				dataList.append(self.arrange_data(data['RM-2108']))
 
-		for zone in self.testlist:
-			dataList.append(self.arrange_data(rawDataDict[zone]))
+		#for zone in self.testlist:
+		#	dataList.append(self.arrange_data(rawDataDict[zone]))
+		for idx, filename in enumerate(filenameList):
+			with open(filename,'rb') as fp:
+				rawDataDict = pickle.load(fp)
+				dataList.append(self.arrange_data(rawDataDict))
+		
+		testDataList = list()
+		for idx, filename in enumerate(testFilenameList):
+			with open(filename,'rb') as fp:
+				rawDataDict = pickle.load(fp)
+				testDataList.append(self.arrange_data(rawDataDict))
 
-		dataDict = self.merge_data(dataList[0], dataList[:-1])
+		if len(testDataList)==1:
+			testDataDict = testDataList[0]
+		else:
+			testDataDict=  self.merge_data(testDataList[0], testDataList[:-1])
+
+#		dataList.append(self.arrange_data(rawDataDict))
+
+		if len(dataList)==1:
+			dataDict = dataList[0]
+		else:
+			dataDict = self.merge_data(dataList[0], dataList[:-1])
 
 		for key, data in dataDict.iteritems():
 			print key
-			self.fit_data(data[key], data.drop(key,axis=1))
+			self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1))
 	
-	def fit_data(self, y, xs):
-		svr_rbf = SVR(kernel='rbf', C=1e3, gamma=0.1)
+	def fit_data(self, y, xs, testy, testxs):
+		#svr_rbf = SVR(kernel='rbf', C=1e3, gamma=0.1)
+		svr_rbf = SVR()
 		fitted = svr_rbf.fit(xs,y)
 		y_rbf = fitted.predict(xs)
 		fig = plt.figure()
-		ax1 = fig.add_subplot(1,2,1,projection='3d')
-		ax1.scatter(xs[xs.keys()[0]],xs[xs.keys()[0]],y,c='k')
+		ax1 = fig.add_subplot(2,2,1,projection='3d')
+		ax1.scatter(xs[xs.keys()[0]],xs[xs.keys()[1]],y,c='k')
 		#plt.show()
 		#fig2 = plt.figure()
-		ax2 = fig.add_subplot(1,2,2,projection='3d')
-		ax2.scatter(xs[xs.keys()[0]],xs[xs.keys()[0]],y_rbf,c='k')
-		plt.show()
+		ax2 = fig.add_subplot(2,2,2,projection='3d')
+		ax2.scatter(xs[xs.keys()[0]],xs[xs.keys()[1]],y_rbf,c='k')
+
+		test_y_rbf = fitted.predict(testxs)
+		ax3 = fig.add_subplot(2,2,3,projection='3d')
+		ax3.scatter(testxs[testxs.keys()[0]],testxs[testxs.keys()[1]],testy,c='k')
+
+		ax4 = fig.add_subplot(2,2,4,projection='3d')
+		ax4.scatter(testxs[testxs.keys()[0]],testxs[testxs.keys()[1]],test_y_rbf,c='k')
+		rmse = sqrt(mean_squared_error(testy, test_y_rbf))
+		normRmse = rmse/np.mean(testy)
+		print rmse, normRmse
+		print '\n'
+
+		#plt.show()
+
+		
 		pass

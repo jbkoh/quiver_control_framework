@@ -94,7 +94,7 @@ class Analyzer:
 			procData = procData.append(newData)
 		return procData
 
-	def normalize_data_nextval(self, rawData, beginTime, endTime):
+	def normalize_data_nextval_deprecated(self, rawData, beginTime, endTime):
 		procData = pd.Series({beginTime:float(rawData[0])})
 		tp = beginTime
 		while tp<=endTime:
@@ -122,31 +122,48 @@ class Analyzer:
 			procData = procData.append(newData)
 		return procData
 
-	def receive_a_sensor(self, zone, actuType, beginTime, endTime, normType):
-		uuid = self.get_actuator_uuid(zone, actuType)
-		rawData = self.bdm.get_sensor_ts(uuid, 'PresentValue', beginTime, endTime)
-		if normType=='avg':
-			procData = self.normalize_data_avg(rawData, beginTime, endTime)
-		elif normType=='nextval':
-			procData = self.normalize_data_nextval(rawData, beginTime, endTime)
+	def normalize_data(self, rawData, beginTime, endTime, normType):
+		rawData = rawData[beginTime:endTime]
+		if not beginTime in rawData.index:
+			rawData[beginTime] = rawData.head(1)[0]
+		if not endTime in rawData.index:
+			rawData[endTime] = rawData.tail(1)[0]
+		rawData = rawData.sort_index()
+		if normType=='nextval':
+			procData = rawData.resample('2Min', fill_method='pad')
+		elif normType=='avg':
+			procData = rawData.resample('2Min', how='mean')
 		else:
 			procData = None
 
+		return procData
+		
+
+	def receive_a_sensor(self, zone, actuType, beginTime, endTime, normType):
+		uuid = self.get_actuator_uuid(zone, actuType)
+		rawData = self.bdm.get_sensor_ts(uuid, 'PresentValue', beginTime, endTime)
+#		if normType=='avg':
+#			procData = self.normalize_data_avg(rawData, beginTime, endTime)
+#		elif normType=='nextval':
+#			procData = self.normalize_data_nextval(rawData, beginTime, endTime)
+#		else:
+#			procData = None
+		procData = self.normalize_data(rawData, beginTime, endTime, normType)
 		return procData
 
 	def receive_entire_sensors_notstore(self, beginTime, endTime, normType):
 		#TODO: Should be parallelized here
 		dataDict = dict()
 		for zone in self.zonelist:
-			zoneDict = dict()
-			for actuType in self.actuNames.nameList+self.sensorNames.nameList:
-				try:
-					uuid = self.get_actuator_uuid(zone, actuType)
-				except QRError:
-					continue
-				data = self.receive_a_sensor(zone, actuType, beginTime, endTime, normType)
-				zoneDict[actuType] = data
-			dataDict[zone] = zoneDict
+#			zoneDict = dict()
+#			for actuType in self.actuNames.nameList+self.sensorNames.nameList:
+#				try:
+#					uuid = self.get_actuator_uuid(zone, actuType)
+#				except QRError:
+#					continue
+#				data = self.receive_a_sensor(zone, actuType, beginTime, endTime, normType)
+#				zoneDict[actuType] = data
+			dataDict[zone] = self.receive_zone_sensors(zone, beginTime, endTime, normType)
 		return dataDict
 	
 	def receive_entire_sensors(self, beginTime, endTime, filename, normType):
@@ -171,6 +188,30 @@ class Analyzer:
 			featDict[zone] = featList
 		print featDict['RM-4132']
 		return self.clust.cluster_kmeans(featDict)
+	
+	def remove_negativeone(self, data):
+		if -1 in data:
+			indices = np.where(data==-1)
+			for idx in indices:
+				data[idx] = data[idx-1]
+		return data
 
-
-
+	def receive_zone_sensors(self, zone, beginTime, endTime, normType):
+		zoneDict = dict()
+		for actuType in self.actuNames.nameList+self.sensorNames.nameList:
+			try:
+				uuid = self.get_actuator_uuid(zone, actuType)
+			except QRError:
+				continue
+			if actuType == self.actuNames.commonSetpoint:
+				wcad = self.receive_a_sensor(zone, 'Warm Cool Adjust', beginTime, endTime, normType)
+				data = self.receive_a_sensor(zone, actuType, beginTime, endTime, normType)
+				data = data + wcad
+				pass
+			elif actuType != 'DamperCommand':
+				data = self.receive_a_sensor(zone, actuType, beginTime, endTime, normType)
+				data = self.remove_negativeone(data)
+			else:
+				data = self.receive_a_sensor(zone, actuType, beginTime, endTime, normType)
+			zoneDict[actuType] = data
+		return zoneDict
