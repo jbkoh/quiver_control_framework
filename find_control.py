@@ -134,8 +134,13 @@ class FindControl:
 		return dataDict
 
 	def arrange_data(self, zoneData):
-		acsDF = pd.DataFrame({'acs':zoneData[self.actuNames.actualCoolingSetpoint], 'cs':zoneData[self.actuNames.commonSetpoint], 'oc':zoneData[self.actuNames.occupiedCommand], 'tempocc':zoneData[self.actuNames.tempOccSts], 'wcad':zoneData[self.actuNames.warmCoolAdjust]})
-		ahsDF = pd.DataFrame({'ahs':zoneData[self.actuNames.actualHeatingSetpoint], 'cs':zoneData[self.actuNames.commonSetpoint], 'oc':zoneData[self.actuNames.occupiedCommand], 'tempocc':zoneData[self.actuNames.tempOccSts], 'wcad':zoneData[self.actuNames.warmCoolAdjust]})
+		#acsDF = pd.DataFrame({'acs':zoneData[self.actuNames.actualCoolingSetpoint], 'cs':zoneData[self.actuNames.commonSetpoint], 'oc':zoneData[self.actuNames.occupiedCommand], 'tempocc':zoneData[self.actuNames.tempOccSts], 'wcad':zoneData[self.actuNames.warmCoolAdjust]})
+		#ahsDF = pd.DataFrame({'ahs':zoneData[self.actuNames.actualHeatingSetpoint], 'cs':zoneData[self.actuNames.commonSetpoint], 'oc':zoneData[self.actuNames.occupiedCommand], 'tempocc':zoneData[self.actuNames.tempOccSts], 'wcad':zoneData[self.actuNames.warmCoolAdjust]})
+		oc = (zoneData[self.actuNames.occupiedCommand]-1)/2
+		tempocc = zoneData[self.actuNames.tempOccSts]
+		newocc = np.logical_or(oc, tempocc)
+		acsDF = pd.DataFrame({'acs':zoneData[self.actuNames.actualCoolingSetpoint], 'cs':zoneData[self.actuNames.commonSetpoint]+zoneData[self.actuNames.warmCoolAdjust], 'oc':newocc})
+		ahsDF = pd.DataFrame({'ahs':zoneData[self.actuNames.actualHeatingSetpoint], 'cs':zoneData[self.actuNames.commonSetpoint]+zoneData[self.actuNames.warmCoolAdjust], 'oc':newocc})
 		ccDF = pd.DataFrame({'cc':zoneData[self.actuNames.coolingCommand], 'zt':zoneData[self.sensorNames.zoneTemperature], 'acs':zoneData[self.actuNames.actualCoolingSetpoint]})
 		hcDF = pd.DataFrame({'hc':zoneData[self.actuNames.heatingCommand], 'zt':zoneData[self.sensorNames.zoneTemperature], 'ahs':zoneData[self.actuNames.actualHeatingSetpoint]})
 		asfspDF = pd.DataFrame({'asfsp':zoneData[self.actuNames.actualSupplyFlowSP], 'cc':zoneData[self.actuNames.coolingCommand], 'hc':zoneData[self.actuNames.heatingCommand], 'ocm':zoneData[self.actuNames.occupiedCoolingMinimumFlow]})
