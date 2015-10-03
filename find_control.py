@@ -134,8 +134,8 @@ class FindControl:
 		return dataDict
 
 	def arrange_data(self, zoneData):
-		acsDF = pd.DataFrame({'acs':zoneData[self.actuNames.actualCoolingSetpoint], 'cs':zoneData[self.actuNames.commonSetpoint], 'oc':zoneData[self.actuNames.occupiedCommand]})
-		ahsDF = pd.DataFrame({'ahs':zoneData[self.actuNames.actualHeatingSetpoint], 'cs':zoneData[self.actuNames.commonSetpoint], 'oc':zoneData[self.actuNames.occupiedCommand]})
+		acsDF = pd.DataFrame({'acs':zoneData[self.actuNames.actualCoolingSetpoint], 'cs':zoneData[self.actuNames.commonSetpoint], 'oc':zoneData[self.actuNames.occupiedCommand], 'tempocc':zoneData[self.actuNames.tempOccSts], 'wcad':zoneData[self.actuNames.warmCoolAdjust]})
+		ahsDF = pd.DataFrame({'ahs':zoneData[self.actuNames.actualHeatingSetpoint], 'cs':zoneData[self.actuNames.commonSetpoint], 'oc':zoneData[self.actuNames.occupiedCommand], 'tempocc':zoneData[self.actuNames.tempOccSts], 'wcad':zoneData[self.actuNames.warmCoolAdjust]})
 		ccDF = pd.DataFrame({'cc':zoneData[self.actuNames.coolingCommand], 'zt':zoneData[self.sensorNames.zoneTemperature], 'acs':zoneData[self.actuNames.actualCoolingSetpoint]})
 		hcDF = pd.DataFrame({'hc':zoneData[self.actuNames.heatingCommand], 'zt':zoneData[self.sensorNames.zoneTemperature], 'ahs':zoneData[self.actuNames.actualHeatingSetpoint]})
 		asfspDF = pd.DataFrame({'asfsp':zoneData[self.actuNames.actualSupplyFlowSP], 'cc':zoneData[self.actuNames.coolingCommand], 'hc':zoneData[self.actuNames.heatingCommand], 'ocm':zoneData[self.actuNames.occupiedCoolingMinimumFlow]})
@@ -152,23 +152,9 @@ class FindControl:
 	def organize_data(self):
 		#rawDataDict = self.anal.receive_entire_sensors_notstore(datetime(2015,9,29),datetime(2015,9,30,6))
 		filenameList = list()
-		#filename = 'data/controldata_nextval.pkl'
-		#filename = 'data/4132_2014.pkl'
-		filename = 'data/3152_09302015.pkl'
-		filenameList.append(filename)
-		filename = 'data/3109_09302015.pkl'
-		filenameList.append(filename)
-		filename = 'data/2150_09132015.pkl'
-		filenameList.append(filename)
-		filename = 'data/2148_01012015.pkl'
-		filenameList.append(filename)
-		fig = plt.figure()
-		ax = fig.add_subplot(111,projection='3d')
-
 		testFilenameList = list()
-		testFilenameList.append('data/2150_01012015.pkl')
-		testFilenameList.append('data/4148_09012015.pkl')
-		testFilenameList.append('data/2112_09012015.pkl')
+		testFilenameList.append('data\oneday_2150_0914.pkl')
+		filenameList.append('data\oneweek_2150_0920.pkl')
 
 		dataList = list()
 #		for idx, filename in enumerate(filenameList):
@@ -214,7 +200,6 @@ class FindControl:
 		#svr_rbf = SVR()
 		fitted = svr_rbf.fit(xs,y)
 		y_rbf = fitted.predict(xs)
-		fig = plt.figure()
 		#ax1 = fig.add_subplot(2,2,1,projection='3d')
 		#ax1.scatter(xs[xs.keys()[0]],xs[xs.keys()[1]],y,c='k')
 		
@@ -230,24 +215,35 @@ class FindControl:
 		rmse = sqrt(mean_squared_error(testy, testy_rbf))
 		normRmse = rmse/np.mean(testy)
 
+		fig = plt.figure()
+		ax1 = fig.add_subplot(121)
+		ax1.plot(y,c='b')
+		ax1.plot(xs[xs.keys()[0]], c='r')
+		ax2 = fig.add_subplot(122)
+		ax2.plot(y, c='b')
+		ax2.plot(xs[xs.keys()[1]], c='r')
+		plt.show()
+
+
+		fig = plt.figure()
 		ax1 = fig.add_subplot(121)
 		plotList = list()
-		plotList.append(ax1.plot(y, c='b', label='original'))
-		plotList.append(ax1.plot(y_rbf, c='r', label='fitted'))
+		plotList.append(ax1.plot_date(y.index, y, c='b', label='original', marker='None', linestyle='-'))
+		plotList.append(ax1.plot_date(y.index, y_rbf, c='r', label='fitted', marker='None', linestyle='-'))
 		ax1.set_title('Learning Data')
 		ax1.legend()
 		plotList = list()
 		ax2 = fig.add_subplot(122)
-		plotList.append(ax2.plot(testy, c='b', label='original'))
-		plotList.append(ax2.plot(testy_rbf, c='r', label='fitted'))
+		plotList.append(ax2.plot_date(testy.index, testy, c='b', label='original', marker='None', linestyle='-'))
+		plotList.append(ax2.plot_date(testy.index, testy_rbf, c='r', label='fitted', marker='None', linestyle='-'))
 		ax2.set_title('Test Data')
 		ax2.legend()
+		plt.show()
 
 		
 		print rmse, normRmse
 		print '\n'
 
-		plt.show()
 
 		
 		pass

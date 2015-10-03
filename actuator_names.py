@@ -8,6 +8,8 @@ class ActuatorNames:
 	occupiedCoolingMinimumFlow = 'Occupied Clg Min'
 	actualCoolingSetpoint= 'Actual Cooling Setpoint'
 	actualHeatingSetpoint= 'Actual Heating Setpoint'
+	tempOccSts = 'Temp Occ Sts'
+	warmCoolAdjust = 'Warm Cool Adjust'
 	nameList = None
 	
 	def __init__(self):
@@ -21,6 +23,8 @@ class ActuatorNames:
 		self.nameList.append(self.occupiedCoolingMinimumFlow)
 		self.nameList.append(self.actualCoolingSetpoint)
 		self.nameList.append(self.actualHeatingSetpoint)
+		self.nameList.append(self.tempOccSts)
+		self.nameList.append(self.warmCoolAdjust)
 
 	def __contains__(self, given):
 		if given in self.nameList:

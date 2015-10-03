@@ -142,12 +142,6 @@ class Analyzer:
 	def receive_a_sensor(self, zone, actuType, beginTime, endTime, normType):
 		uuid = self.get_actuator_uuid(zone, actuType)
 		rawData = self.bdm.get_sensor_ts(uuid, 'PresentValue', beginTime, endTime)
-#		if normType=='avg':
-#			procData = self.normalize_data_avg(rawData, beginTime, endTime)
-#		elif normType=='nextval':
-#			procData = self.normalize_data_nextval(rawData, beginTime, endTime)
-#		else:
-#			procData = None
 		procData = self.normalize_data(rawData, beginTime, endTime, normType)
 		return procData
 
@@ -155,14 +149,6 @@ class Analyzer:
 		#TODO: Should be parallelized here
 		dataDict = dict()
 		for zone in self.zonelist:
-#			zoneDict = dict()
-#			for actuType in self.actuNames.nameList+self.sensorNames.nameList:
-#				try:
-#					uuid = self.get_actuator_uuid(zone, actuType)
-#				except QRError:
-#					continue
-#				data = self.receive_a_sensor(zone, actuType, beginTime, endTime, normType)
-#				zoneDict[actuType] = data
 			dataDict[zone] = self.receive_zone_sensors(zone, beginTime, endTime, normType)
 		return dataDict
 	
@@ -190,7 +176,7 @@ class Analyzer:
 		return self.clust.cluster_kmeans(featDict)
 	
 	def remove_negativeone(self, data):
-		if -1 in data:
+		if -1 in data.values:
 			indices = np.where(data==-1)
 			for idx in indices:
 				data[idx] = data[idx-1]
@@ -203,15 +189,22 @@ class Analyzer:
 				uuid = self.get_actuator_uuid(zone, actuType)
 			except QRError:
 				continue
-			if actuType == self.actuNames.commonSetpoint:
-				wcad = self.receive_a_sensor(zone, 'Warm Cool Adjust', beginTime, endTime, normType)
-				data = self.receive_a_sensor(zone, actuType, beginTime, endTime, normType)
-				data = data + wcad
-				pass
-			elif actuType != 'DamperCommand':
+#			if actuType == self.actuNames.commonSetpoint:
+#				wcad = self.receive_a_sensor(zone, 'Warm Cool Adjust', beginTime, endTime, normType)
+#				data = self.receive_a_sensor(zone, actuType, beginTime, endTime, normType)
+#				data = data + wcad
+#				pass
+			if actuType != self.actuNames.damperCommand:
 				data = self.receive_a_sensor(zone, actuType, beginTime, endTime, normType)
 				data = self.remove_negativeone(data)
 			else:
 				data = self.receive_a_sensor(zone, actuType, beginTime, endTime, normType)
 			zoneDict[actuType] = data
 		return zoneDict
+
+
+	def store_zone_sensors(self, zone, beginTime, endTime, normType, filename):
+		data = self.receive_zone_sensors(zone, beginTime, endTime, normType)
+		with open(filename, 'wb') as fp:
+			pickle.dump(data, fp)
+
