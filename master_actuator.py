@@ -37,6 +37,18 @@ class DefaultType(object):
 		else:
 			return False
 
+class TempOcType(DefaultType):
+	commands = (0,1) #0=unoccupied, 1=occupied
+
+	def __init__(self):
+		pass
+
+	def validate(self,given):
+		if given in self.commands or given==-1:
+			return True
+		else:
+			return False
+
 class OcType(DefaultType):
 	commands = (1,2,3) #1=unoccupied, 2=standby, 3=occupied
 

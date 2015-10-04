@@ -6,15 +6,18 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from pytz import timezone
 from quiver import QRError
+from analyzer import Analyzer
 
 
 class QuiverPlotter:
 	bdm = None
 	baseDir = 'figs/'
 	pst = timezone("US/Pacific")
+	anal = None
 
 	def __init__(self):
 		self.bdm = BDWrapper()
+		self.anal = Analyzer()
 	
 	def get_actuator_uuid(self, zone=None, actuType=None):
 		context = dict()
@@ -42,7 +45,8 @@ class QuiverPlotter:
 			if type(actuType)!=list:
 				title = zone + ", " + actuType
 				uuid = self.get_actuator_uuid(zone, actuType)
-				data = self.bdm.get_sensor_ts(uuid, 'PresentValue', beginTime, endTime)
+#				data = self.bdm.get_sensor_ts(uuid, 'PresentValue', beginTime, endTime)
+				data = self.anal.receive_a_sensor(zone, actuType, beginTime, endTime, 'nextval')
 				tp = map(g, data.index)
 				plotter.plot_timeseries(tp, data.values, axis=axes[idx], title=title)
 			else:

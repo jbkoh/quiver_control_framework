@@ -403,6 +403,8 @@ class Quiver:
 					issueFlagList[idx] = True
 					seq.loc[idx, 'set_time'] = uploadedTimeList[idx]
 					logging.debug("Received a ack of a command: \n%s", repr(row[1]))
+					if setVal==-1:
+						actuator.set_value(currVal, uploadedTimeList[idx])
 					continue
 				now = self.now()
 				if now>=uploadedTimeList[idx]+resendInterval:

@@ -27,6 +27,10 @@ def make_actuator(uuid, name, zone=None, actuType=None):
 		return DamperCommand(name, uuid, -0.5,0.5,zone)
 	if actuType==actuNames.occupiedCoolingMinimumFlow:
 		return OccupiedCoolingMinimumFlow(name, uuid, 0, 500, zone)
+	if actuType==actuNames.occupiedCoolingMinimumFlow:
+		return OccupiedCoolingMinimumFlow(name, uuid, 0, 500, zone)
+	if actuType==actuNames.tempOccSts:
+		return TempOccSts(name, uuid, zone)
 	else:
 		print "Failed to make an actuator: incorrect type name, " + actuType
 		return None
@@ -93,6 +97,35 @@ class ActualCoolingSetpoint(Actuator):
 
 	def reset_value(self, val, tp):
 		super(ActualCoolingSetpoint, self).reset_value(val, tp)
+	
+	#TODO: Do I need this?
+	def set_reset_value(self):
+		pass
+
+class TempOccSts(Actuator):
+	zone = None
+	template = None
+	actuNames = ActuatorNames()
+
+#TODO: Is it okay to set minVal and maxVal arbitrarily outside this class?
+	def __init__ (self, name, uuid, zone):
+		self.name = name
+		self.uuid = uuid
+		super(TempOccSts, self).__init__(timedelta(minutes=2))
+		self.inputType = master_actuator.TempOcType()
+		self.zone = zone
+		self.template = self.actuNames.tempOccSts
+		self.sensorType = 'PresentValue'
+
+	def set_value(self, val, tp):
+		super(TempOccSts, self).set_value(val, tp)
+
+	def get_value(self, beginTime, endTime):
+#		return self.bdm.get_zone_sensor_ts(self.zone, self.template, self.sensorType, beginTime, endTime)
+		return self.bdm.get_sensor_ts(self.uuid, self.sensorType, beginTime, endTime)
+
+	def reset_value(self, val, tp):
+		super(TempOccSts, self).reset_value(val,tp)
 	
 	#TODO: Do I need this?
 	def set_reset_value(self):
