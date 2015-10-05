@@ -172,7 +172,9 @@ class FindControl:
 		zt = zoneData[self.sensorNames.zoneTemperature]
 		try:
 			tempocc = zoneData[self.actuNames.tempOccSts]
-			newoc = np.logical_or((oc-1)/2, tempocc)
+			#newoc = np.logical_or((oc-1)/2, tempocc)
+			newoc = oc
+			newoc[tempocc==1] = 3
 		except:
 			pass
 		wcad = zoneData[self.actuNames.warmCoolAdjust]
@@ -211,7 +213,7 @@ class FindControl:
 		acs_diff_lag6 = self.shift_fill(acs_diff,6)
 
 		#acsDF = pd.DataFrame({'acs':acs, 'cs':cs, 'oc':newoc, 'wcad':wcad, 'const':const})
-		acsDF = pd.DataFrame({'acs':acs, 'cs':newcs, 'oc':newoc , 'const':const})
+		acsDF = pd.DataFrame({'acs':acs, 'cs':newcs, 'oc':newoc})
 		#ahsDF = pd.DataFrame({'ahs':ahs, 'cs':cs, 'oc':oc, 'tempocc':tempocc, 'wcad':wcad})
 		ahsDF = pd.DataFrame({'ahs':ahs, 'cs':newcs, 'oc':newoc, 'const':const})
 
@@ -290,14 +292,17 @@ class FindControl:
 			print "SVR"
 			
 			#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=SVR(kernel='rbf', verbose=False), filename='figs/rbfSVM.pdf')
-			learnPosIdx = data['oc'].values==1
-			learnNegIdx = data['oc'].values==0
-			testPosIdx = testDataDict[key]['oc'].values==1
-			testNegIdx = testDataDict[key]['oc'].values==0
+			learn1Idx = data['oc'].values==1
+			learn2Idx = data['oc'].values==2
+			learn3Idx = data['oc'].values==3
+			test1Idx = testDataDict[key]['oc'].values==1
+			test2Idx = testDataDict[key]['oc'].values==2
+			test3Idx = testDataDict[key]['oc'].values==3
 
 			self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=LinearSVR(verbose=True),filename='figs/linearSVM.pdf')
-			#self.fit_data(data[key][learnPosIdx], data[learnPosIdx].drop([key,'oc'],axis=1), testDataDict[key][key][testPosIdx], testDataDict[key][testPosIdx].drop([key,'oc'],axis=1), model=LinearSVR(verbose=True, max_iter=5000),filename='figs/linearSVM.pdf')
-			#self.fit_data(data[key][learnNegIdx], data[learnNegIdx].drop([key,'oc'],axis=1), testDataDict[key][key][testNegIdx], testDataDict[key][testNegIdx].drop([key,'oc'],axis=1), model=LinearSVR(verbose=True, max_iter=5000),filename='figs/linearSVM.pdf')
+			self.fit_data(data[key][learn1Idx], data[learn1Idx].drop([key,'oc'],axis=1), testDataDict[key][key][test1Idx], testDataDict[key][test1Idx].drop([key,'oc'],axis=1), model=LinearSVR(verbose=True, max_iter=5000),filename='figs/linearSVM.pdf')
+			#self.fit_data(data[key][learn2Idx], data[learn2Idx].drop([key,'oc'],axis=1), testDataDict[key][key][test2Idx], testDataDict[key][test2Idx].drop([key,'oc'],axis=1), model=LinearSVR(verbose=True, max_iter=5000),filename='figs/linearSVM.pdf')
+			self.fit_data(data[key][learn3Idx], data[learn3Idx].drop([key,'oc'],axis=1), testDataDict[key][key][test3Idx], testDataDict[key][test3Idx].drop([key,'oc'],axis=1), model=LinearSVR(verbose=True, max_iter=5000),filename='figs/linearSVM.pdf')
 			#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=SVR(kernel='sigmoid', verbose=True), filename='figs/sigmoidSVM.pdf')
 			print "Logistic"
 			#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=LogisticRegression(solver='newton-cg'), filename='figs/newtonLogistic.pdf')
