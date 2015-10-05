@@ -126,9 +126,10 @@ class Analyzer:
 		rawData = rawData[beginTime:endTime]
 		if not beginTime in rawData.index:
 			rawData[beginTime] = rawData.head(1)[0]
+			rawData = rawData.sort_index()
 		if not endTime in rawData.index:
 			rawData[endTime] = rawData.tail(1)[0]
-		rawData = rawData.sort_index()
+			rawData = rawData.sort_index()
 		if normType=='nextval':
 			procData = rawData.resample('2Min', fill_method='pad')
 		elif normType=='avg':
@@ -142,6 +143,8 @@ class Analyzer:
 	def receive_a_sensor(self, zone, actuType, beginTime, endTime, normType):
 		uuid = self.get_actuator_uuid(zone, actuType)
 		rawData = self.bdm.get_sensor_ts(uuid, 'PresentValue', beginTime, endTime)
+		if actuType!=self.actuNames.damperCommand:
+			rawData = self.remove_negativeone(rawData)
 		procData = self.normalize_data(rawData, beginTime, endTime, normType)
 		return procData
 
@@ -195,8 +198,9 @@ class Analyzer:
 #				data = data + wcad
 #				pass
 			if actuType != self.actuNames.damperCommand:
+				if actuType==self.actuNames.occupiedCommand:
+					pass
 				data = self.receive_a_sensor(zone, actuType, beginTime, endTime, normType)
-				data = self.remove_negativeone(data)
 			else:
 				data = self.receive_a_sensor(zone, actuType, beginTime, endTime, normType)
 			zoneDict[actuType] = data

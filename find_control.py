@@ -134,9 +134,13 @@ class FindControl:
 	def merge_data(self, data1, dataList):
 		dataDict = dict()
 		for key in data1.iterkeys():
+			data1[key].index = range(0,len(data1[key]))
+			idxLen = len(data1[key])
 #			data1[key] = pd.concat([df1, dataList[key]])
 			for data in dataList:
-				dataDict[key] = pd.concat([data1[key],data[key]])
+				data[key].index = range(idxLen,idxLen+len(data[key]))
+				idxLen = idxLen + len(data[key])
+				dataDict[key] = data1[key].append(data[key], ignore_index=True)
 		return dataDict
 
 	def lpf(self, data):
@@ -163,16 +167,16 @@ class FindControl:
 	def arrange_data(self, zoneData):
 		oc = zoneData[self.actuNames.occupiedCommand]
 		cs = zoneData[self.actuNames.commonSetpoint]
-		acs = self.lpf(zoneData[self.actuNames.actualCoolingSetpoint])
+		acs = zoneData[self.actuNames.actualCoolingSetpoint]
 		ahs = zoneData[self.actuNames.actualHeatingSetpoint]
-		zt = self.lpf(zoneData[self.sensorNames.zoneTemperature])
+		zt = zoneData[self.sensorNames.zoneTemperature]
 		try:
 			tempocc = zoneData[self.actuNames.tempOccSts]
 			newoc = np.logical_or((oc-1)/2, tempocc)
 		except:
 			pass
 		wcad = zoneData[self.actuNames.warmCoolAdjust]
-		cc = self.lpf(zoneData[self.actuNames.coolingCommand])
+		cc = zoneData[self.actuNames.coolingCommand]
 		hc = zoneData[self.actuNames.heatingCommand]
 		cmf = zoneData[self.actuNames.coolingMaxFlow]
 		ocm = zoneData[self.actuNames.occupiedCoolingMinimumFlow]
@@ -206,10 +210,10 @@ class FindControl:
 		acs_diff_lag5 = self.shift_fill(acs_diff,5)
 		acs_diff_lag6 = self.shift_fill(acs_diff,6)
 
-		#acsDF = pd.DataFrame({'acs':acs, 'cs':cs, 'oc':oc, 'tempocc':tempocc, 'wcad':wcad})
-		#acsDF = pd.DataFrame({'acs':acs, 'cs':newcs, 'oc':newoc})
+		#acsDF = pd.DataFrame({'acs':acs, 'cs':cs, 'oc':newoc, 'wcad':wcad, 'const':const})
+		acsDF = pd.DataFrame({'acs':acs, 'cs':newcs, 'oc':newoc , 'const':const})
 		#ahsDF = pd.DataFrame({'ahs':ahs, 'cs':cs, 'oc':oc, 'tempocc':tempocc, 'wcad':wcad})
-		#ahsDF = pd.DataFrame({'ahs':ahs, 'cs':newcs, 'oc':newoc})
+		ahsDF = pd.DataFrame({'ahs':ahs, 'cs':newcs, 'oc':newoc, 'const':const})
 
 
 
@@ -217,14 +221,14 @@ class FindControl:
 		#ccDF = pd.DataFrame({'cc':cc, 'zt':zt, 'acs':acs, 'acs_diff':acs_diff, 'acs_diff_diff':acs_diff_diff, 'acs_diff_lag1':acs_diff_lag1, 'acs_diff_lag2':acs_diff_lag2, 'acs_diff_lag3':acs_diff_lag3, 'acs_diff_lag4':acs_diff_lag4, 'acs_diff_lag5':acs_diff_lag5, 'acs_i':acs_i, 'zt_i':zt_i, })
 		#hcDF = pd.DataFrame({'hc':zoneData[self.actuNames.heatingCommand], 'zt':zoneData[self.sensorNames.zoneTemperature], 'ahs':zoneData[self.actuNames.actualHeatingSetpoint]})
 		#asfspDF = pd.DataFrame({'asfsp':zoneData[self.actuNames.actualSupplyFlowSP], 'cc':zoneData[self.actuNames.coolingCommand], 'hc':zoneData[self.actuNames.heatingCommand], 'ocm':zoneData[self.actuNames.occupiedCoolingMinimumFlow], 'oc':oc, 'cmf':cmf})
-		asfspDF = pd.DataFrame({'asfsp':zoneData[self.actuNames.actualSupplyFlowSP], 'cc':zoneData[self.actuNames.coolingCommand], 'const':const, 'oc':oc, 'cmf':cmf, 'ocm':ocm, 'tempocc':tempocc})
+		#asfspDF = pd.DataFrame({'asfsp':zoneData[self.actuNames.actualSupplyFlowSP], 'cc':zoneData[self.actuNames.coolingCommand], 'const':const, 'oc':oc, 'cmf':cmf, 'ocm':ocm, 'tempocc':tempocc})
 		#dcDF = pd.DataFrame({'dc':zoneData[self.actuNames.damperCommand], 'asf':zoneData[self.sensorNames.actualSupplyFlow], 'asfsp':zoneData[self.actuNames.actualSupplyFlowSP]})
 		output = dict()
-		#output['acs'] = acsDF
+		output['acs'] = acsDF
 		#output['ahs'] = ahsDF
 		#output['cc'] = ccDF
 		#output['hc'] = hcDF
-		output['asfsp'] = asfspDF
+		#output['asfsp'] = asfspDF
 		#output['dc'] = dcDF
 		return output
 
@@ -233,8 +237,16 @@ class FindControl:
 		filenameList = list()
 		testfilenameList = list()
 		testfilenameList.append('data\oneweek_4152_0714.pkl')
-#		testfilenameList.append('data\oneday_2148_0820.pkl')
-		filenameList.append('data\oneweek_2150_0920.pkl')
+		#testfilenameList.append('data\oneday_2148_0820.pkl')
+		
+		#testfilenameList.append('data\oneweek_2150_0920.pkl')
+		filenameList.append('data\oneday_2234_1004.pkl')
+		filenameList.append('data\oneday_4150_1004.pkl')
+		
+
+		#filenameList.append('data\oneyear_2150_0101.pkl')
+
+		#filenameList.append('data\oneweek_4152_0714.pkl')
 		#filenameList.append('data\oneweek_2148_0714.pkl')
 		#filenameList.append('data\onemonth_2150_0820.pkl')
 
@@ -252,7 +264,8 @@ class FindControl:
 		for idx, filename in enumerate(filenameList):
 			with open(filename,'rb') as fp:
 				rawDataDict = pickle.load(fp)
-				dataList.append(self.arrange_data(rawDataDict))
+				arrangedData = self.arrange_data(rawDataDict)
+				dataList.append(arrangedData)
 		
 		testDataList = list()
 		for idx, filename in enumerate(testfilenameList):
@@ -275,23 +288,33 @@ class FindControl:
 		for key, data in dataDict.iteritems():
 			print key
 			print "SVR"
+			
 			#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=SVR(kernel='rbf', verbose=False), filename='figs/rbfSVM.pdf')
-			#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=SVR(kernel='linear', verbose=True),filename='figs/linearSVM.pdf')
+			learnPosIdx = data['oc'].values==1
+			learnNegIdx = data['oc'].values==0
+			testPosIdx = testDataDict[key]['oc'].values==1
+			testNegIdx = testDataDict[key]['oc'].values==0
+
 			self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=LinearSVR(verbose=True),filename='figs/linearSVM.pdf')
-#			self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=SVR(kernel='polynomial', verbose=True), filename='figs/polySVM.pdf')
+			#self.fit_data(data[key][learnPosIdx], data[learnPosIdx].drop([key,'oc'],axis=1), testDataDict[key][key][testPosIdx], testDataDict[key][testPosIdx].drop([key,'oc'],axis=1), model=LinearSVR(verbose=True, max_iter=5000),filename='figs/linearSVM.pdf')
+			#self.fit_data(data[key][learnNegIdx], data[learnNegIdx].drop([key,'oc'],axis=1), testDataDict[key][key][testNegIdx], testDataDict[key][testNegIdx].drop([key,'oc'],axis=1), model=LinearSVR(verbose=True, max_iter=5000),filename='figs/linearSVM.pdf')
 			#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=SVR(kernel='sigmoid', verbose=True), filename='figs/sigmoidSVM.pdf')
 			print "Logistic"
 			#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=LogisticRegression(solver='newton-cg'), filename='figs/newtonLogistic.pdf')
 			#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=LogisticRegression(solver='lbfgs'), filename='figs/lbfgsLogistic.pdf')
 			#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=LogisticRegression(solver='liblinear'), filename='figs/liblinLogistic.pdf')
 			print "Gaussian Naive Bayes"
-			self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=GaussianNB())
+			#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=GaussianNB())
 			#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=MultinomialNB())
 	
 	def fit_data(self, y, xs, testy, testxs, model=SVR(kernel='rbf'),filename='figs/test.pdf'):
 		#svr_rbf = SVR(kernel='rbf', C=1e3, gamma=0.1)
 		#svr_rbf = SVR()
 		fitted = model.fit(xs,y)
+		try:
+			print model.coef_
+		except:
+			pass
 		y_rbf = fitted.predict(xs)
 		#ax1 = fig.add_subplot(2,2,1,projection='3d')
 		#ax1.scatter(xs[xs.keys()[0]],xs[xs.keys()[1]],y,c='k')
@@ -321,14 +344,18 @@ class FindControl:
 		fig = plt.figure()
 		ax1 = fig.add_subplot(121)
 		plotList = list()
-		plotList.append(ax1.plot_date(y.index, y, c='b', label='original', marker='None', linestyle='-'))
-		plotList.append(ax1.plot_date(y.index, y_rbf, c='r', label='fitted', marker='None', linestyle='-'))
+		#plotList.append(ax1.plot_date(y.index, y, c='b', label='original', marker='None', linestyle='-'))
+		#plotList.append(ax1.plot_date(y.index, y_rbf, c='r', label='fitted', marker='None', linestyle='-'))
+		plotList.append(ax1.plot(y, c='b', label='original', marker='None', linestyle='-'))
+		plotList.append(ax1.plot(y_rbf, c='r', label='fitted', marker='None', linestyle='-'))
 		ax1.set_title('Learning Data')
 		ax1.legend()
 		plotList = list()
 		ax2 = fig.add_subplot(122)
-		plotList.append(ax2.plot_date(testy.index, testy, c='b', label='original', marker='None', linestyle='-'))
-		plotList.append(ax2.plot_date(testy.index, testy_rbf, c='r', label='fitted', marker='None', linestyle='-'))
+#		plotList.append(ax2.plot_date(testy.index, testy, c='b', label='original', marker='None', linestyle='-'))
+#		plotList.append(ax2.plot_date(testy.index, testy_rbf, c='r', label='fitted', marker='None', linestyle='-'))
+		plotList.append(ax2.plot(testy, c='b', label='original', marker='None', linestyle='-'))
+		plotList.append(ax2.plot(testy_rbf, c='r', label='fitted', marker='None', linestyle='-'))
 		ax2.set_title('Test Data')
 		ax2.legend()
 		plotter.save_fig(fig, filename)
