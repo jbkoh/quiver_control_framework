@@ -17,6 +17,7 @@ from sklearn.metrics import mean_squared_error
 from sklearn.svm import SVR, LinearSVR
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB, MultinomialNB
+from sklearn.linear_model import LinearRegression
 from copy import deepcopy
 import scipy.fftpack as fftpack
 from statsmodels.nonparametric.smoothers_lowess import lowess
@@ -95,6 +96,83 @@ class FindControl:
 			test.append(newData)
 			output.append(float(newData))
 		return output
+	
+	def shift_fill(self, data, period=1):
+		if period>=0:
+			return data.shift(period).fillna(method='bfill')
+		else:
+			return data.shift(period).fillna(method='ffill')
+	
+	def arrange_data(self, zoneData):
+		oc = zoneData[self.actuNames.occupiedCommand]
+		cs = zoneData[self.actuNames.commonSetpoint]
+		acs = zoneData[self.actuNames.actualCoolingSetpoint]
+		ahs = zoneData[self.actuNames.actualHeatingSetpoint]
+		zt = zoneData[self.sensorNames.zoneTemperature]
+		try:
+			tempocc = zoneData[self.actuNames.tempOccSts]
+			#newoc = np.logical_or((oc-1)/2, tempocc)
+			newoc = oc
+			newoc[tempocc==1] = 3
+		except:
+			pass
+		wcad = zoneData[self.actuNames.warmCoolAdjust]
+		cc = zoneData[self.actuNames.coolingCommand]
+		hc = zoneData[self.actuNames.heatingCommand]
+		cmf = zoneData[self.actuNames.coolingMaxFlow]
+		#ohf = zoneData[self.actuNames.occupiedHeatingFlow]
+		ocm = zoneData[self.actuNames.occupiedCoolingMinimumFlow]
+		const = pd.Series(data=np.ones(len(oc)), index=oc.index)
+		asfsp = zoneData[self.actuNames.actualSupplyFlowSP]
+		zt_lag1 = self.shift_fill(zt,3)
+		zt_lag2 = self.shift_fill(zt,6)
+		zt_lag3 = self.shift_fill(zt,9)
+		zt_lag4 = self.shift_fill(zt,12)
+		zt_lag5 = self.shift_fill(zt,15)
+		acs_lag1 = self.shift_fill(acs,3)
+		acs_lag2 = self.shift_fill(acs,6)
+		acs_lag3 = self.shift_fill(acs,9)
+		acs_lag4 = self.shift_fill(acs,12)
+		acs_lag5 = self.shift_fill(acs,15)
+		cc_lag1 = self.shift_fill(cc,3)
+		cc_lag2 = self.shift_fill(cc,6)
+		cc_lag3 = self.shift_fill(cc,9)
+		mincc = deepcopy(cc)
+		mincc[:]=0
+		maxcc = deepcopy(cc)
+		maxcc[:]=100
+		newcs = cs + wcad
+		acs_diff = acs - zt
+		acs_diff_diff = acs_diff.diff().fillna(method='bfill')
+		acs_diff_lag1 = self.shift_fill(acs_diff,1)
+		acs_diff_lag2 = self.shift_fill(acs_diff,2)
+		acs_diff_lag3 = self.shift_fill(acs_diff,3)
+		acs_diff_lag4 = self.shift_fill(acs_diff,4)
+		acs_diff_lag5 = self.shift_fill(acs_diff,5)
+		acs_diff_lag6 = self.shift_fill(acs_diff,6)
+
+		#acsDF = pd.DataFrame({'acs':acs, 'cs':cs, 'oc':newoc, 'wcad':wcad, 'const':const})
+		acsDF = pd.DataFrame({'acs':acs, 'cs':newcs, 'oc':newoc, 'const':const})
+		#ahsDF = pd.DataFrame({'ahs':ahs, 'cs':cs, 'oc':oc, 'tempocc':tempocc, 'wcad':wcad})
+		ahsDF = pd.DataFrame({'ahs':ahs, 'cs':newcs, 'oc':newoc, 'const':const})
+
+
+		#ccDF = pd.DataFrame({'cc':cc, 'zt':zt, 'acs':acs, 'maxcc':maxcc, 'mincc':mincc})
+		ccDF = pd.DataFrame({'cc':cc, 'zt':zt, 'acs':acs, 'zt_lag1':zt_lag1, 'zt_lag2':zt_lag2, 'zt_lag3':zt_lag3,'acs_lag1':acs_lag1,'acs_lag2':acs_lag2, 'acs_lag3':acs_lag3, 'maxcc':maxcc, 'mincc':mincc, 'acsdiff':acs_diff, 'zt_lag4':zt_lag4, 'zt_lag5':zt_lag5, 'acs_lag4':acs_lag4, 'acs_lag5':acs_lag5})
+		#ccDF = pd.DataFrame({'cc':cc, 'zt':zt, 'acs':acs, 'acs_diff':acs_diff, 'acs_diff_diff':acs_diff_diff, 'acs_diff_lag1':acs_diff_lag1, 'acs_diff_lag2':acs_diff_lag2, 'acs_diff_lag3':acs_diff_lag3, 'acs_diff_lag4':acs_diff_lag4, 'acs_diff_lag5':acs_diff_lag5, 'acs_i':acs_i, 'zt_i':zt_i, })
+		#hcDF = pd.DataFrame({'hc':zoneData[self.actuNames.heatingCommand], 'zt':zoneData[self.sensorNames.zoneTemperature], 'ahs':zoneData[self.actuNames.actualHeatingSetpoint]})
+		asfspDF = pd.DataFrame({'asfsp':asfsp, 'cc':cc, 'oc':newoc, 'hc':hc, 'ocm':ocm, 'cmf':cmf})
+		#asfspDF = pd.DataFrame({'asfsp':asfsp, 'cc':cc, 'hc':hc, 'ocm':ocm, 'cmf':cmf})
+		#dcDF = pd.DataFrame({'dc':zoneData[self.actuNames.damperCommand], 'asf':zoneData[self.sensorNames.actualSupplyFlow], 'asfsp':zoneData[self.actuNames.actualSupplyFlowSP]})
+		output = dict()
+		output['acs'] = acsDF
+		output['ahs'] = ahsDF
+		output['cc'] = ccDF
+		#output['hc'] = hcDF
+		output['asfsp'] = asfspDF
+		#output['dc'] = dcDF
+		return output
+
 
 
 	def download_control_data(self):
@@ -152,105 +230,73 @@ class FindControl:
 		filtered = filtered / (lpfLen*2+1)
 		return filtered
 
-
-	def shift_fill(self, data, period=1):
-		if period>=0:
-			return data.shift(period).fillna(method='bfill')
-		else:
-			return data.shift(period).fillna(method='ffill')
-	def calc_i(self, data, period):
-		calced = self.shift_fill(data,1)
-		for i in range(2,period+1):
-			calced = calced + self.shift_fill(data,i)
-		return calced
-
-	def arrange_data(self, zoneData):
-		oc = zoneData[self.actuNames.occupiedCommand]
-		cs = zoneData[self.actuNames.commonSetpoint]
-		acs = zoneData[self.actuNames.actualCoolingSetpoint]
-		ahs = zoneData[self.actuNames.actualHeatingSetpoint]
-		zt = zoneData[self.sensorNames.zoneTemperature]
-		try:
-			tempocc = zoneData[self.actuNames.tempOccSts]
-			#newoc = np.logical_or((oc-1)/2, tempocc)
-			newoc = oc
-			newoc[tempocc==1] = 3
-		except:
-			pass
-		wcad = zoneData[self.actuNames.warmCoolAdjust]
-		cc = zoneData[self.actuNames.coolingCommand]
-		hc = zoneData[self.actuNames.heatingCommand]
-		cmf = zoneData[self.actuNames.coolingMaxFlow]
-		ocm = zoneData[self.actuNames.occupiedCoolingMinimumFlow]
-		const = pd.Series(data=np.ones(len(oc)), index=oc.index)
-		zt_lag1 = self.shift_fill(zt,3)
-		zt_lag2 = self.shift_fill(zt,6)
-		zt_lag3 = self.shift_fill(zt,9)
-		zt_lag4 = self.shift_fill(zt,12)
-		zt_lag5 = self.shift_fill(zt,15)
-		acs_i = self.calc_i(acs, 10)
-		zt_i = self.calc_i(zt, 10)
-		acs_lag1 = self.shift_fill(acs,3)
-		acs_lag2 = self.shift_fill(acs,6)
-		acs_lag3 = self.shift_fill(acs,9)
-		acs_lag4 = self.shift_fill(acs,12)
-		acs_lag5 = self.shift_fill(acs,15)
-		cc_lag1 = self.shift_fill(cc,3)
-		cc_lag2 = self.shift_fill(cc,6)
-		cc_lag3 = self.shift_fill(cc,9)
-		mincc = deepcopy(cc)
-		mincc[:]=0
-		maxcc = deepcopy(cc)
-		maxcc[:]=100
-		newcs = cs + wcad
-		acs_diff = acs - zt
-		acs_diff_diff = acs_diff.diff().fillna(method='bfill')
-		acs_diff_lag1 = self.shift_fill(acs_diff,1)
-		acs_diff_lag2 = self.shift_fill(acs_diff,2)
-		acs_diff_lag3 = self.shift_fill(acs_diff,3)
-		acs_diff_lag4 = self.shift_fill(acs_diff,4)
-		acs_diff_lag5 = self.shift_fill(acs_diff,5)
-		acs_diff_lag6 = self.shift_fill(acs_diff,6)
-
-		#acsDF = pd.DataFrame({'acs':acs, 'cs':cs, 'oc':newoc, 'wcad':wcad, 'const':const})
-		acsDF = pd.DataFrame({'acs':acs, 'cs':newcs, 'oc':newoc})
-		#ahsDF = pd.DataFrame({'ahs':ahs, 'cs':cs, 'oc':oc, 'tempocc':tempocc, 'wcad':wcad})
-		ahsDF = pd.DataFrame({'ahs':ahs, 'cs':newcs, 'oc':newoc, 'const':const})
-
-
-
-		#ccDF = pd.DataFrame({'cc':cc, 'zt':zt, 'acs':acs, 'zt_lag1':zt_lag1, 'zt_lag2':zt_lag2, 'zt_lag3':zt_lag3,'acs_lag1':acs_lag1,'acs_lag2':acs_lag2, 'acs_lag3':acs_lag3, 'maxcc':maxcc, 'mincc':mincc, 'acsdiff':acs_diff, 'zt_lag4':zt_lag4, 'zt_lag5':zt_lag5, 'acs_lag4':acs_lag4, 'acs_lag5':acs_lag5})
-		#ccDF = pd.DataFrame({'cc':cc, 'zt':zt, 'acs':acs, 'acs_diff':acs_diff, 'acs_diff_diff':acs_diff_diff, 'acs_diff_lag1':acs_diff_lag1, 'acs_diff_lag2':acs_diff_lag2, 'acs_diff_lag3':acs_diff_lag3, 'acs_diff_lag4':acs_diff_lag4, 'acs_diff_lag5':acs_diff_lag5, 'acs_i':acs_i, 'zt_i':zt_i, })
-		#hcDF = pd.DataFrame({'hc':zoneData[self.actuNames.heatingCommand], 'zt':zoneData[self.sensorNames.zoneTemperature], 'ahs':zoneData[self.actuNames.actualHeatingSetpoint]})
-		#asfspDF = pd.DataFrame({'asfsp':zoneData[self.actuNames.actualSupplyFlowSP], 'cc':zoneData[self.actuNames.coolingCommand], 'hc':zoneData[self.actuNames.heatingCommand], 'ocm':zoneData[self.actuNames.occupiedCoolingMinimumFlow], 'oc':oc, 'cmf':cmf})
-		#asfspDF = pd.DataFrame({'asfsp':zoneData[self.actuNames.actualSupplyFlowSP], 'cc':zoneData[self.actuNames.coolingCommand], 'const':const, 'oc':oc, 'cmf':cmf, 'ocm':ocm, 'tempocc':tempocc})
-		#dcDF = pd.DataFrame({'dc':zoneData[self.actuNames.damperCommand], 'asf':zoneData[self.sensorNames.actualSupplyFlow], 'asfsp':zoneData[self.actuNames.actualSupplyFlowSP]})
-		output = dict()
-		output['acs'] = acsDF
-		#output['ahs'] = ahsDF
-		#output['cc'] = ccDF
-		#output['hc'] = hcDF
-		#output['asfsp'] = asfspDF
-		#output['dc'] = dcDF
-		return output
-
-	def organize_data(self):
-		#rawDataDict = self.anal.receive_entire_sensors_notstore(datetime(2015,9,29),datetime(2015,9,30,6))
-		filenameList = list()
-		testfilenameList = list()
-		testfilenameList.append('data\oneweek_4152_0714.pkl')
-		#testfilenameList.append('data\oneday_2148_0820.pkl')
+	def fit_all_types(self):
 		
-		#testfilenameList.append('data\oneweek_2150_0920.pkl')
-		filenameList.append('data\oneday_2234_1004.pkl')
-		filenameList.append('data\oneday_4150_1004.pkl')
+		print "=======================ASFSP STARTS (w/o CONTROL)==========================="
+		ccLearnFiles = list()
+		ccTestFiles = list()
+		ccLearnFiles.append('data\onemonth_3256_0901.pkl')
+		ccTestFiles.append('data/oneyear_3256_0101.pkl')
+		self.fit_for_a_type(ccLearnFiles, ccTestFiles, 'asfsp')
+		
+		print "=======================CC STARTS (w/o CONTROL)==========================="
+		ccLearnFiles = list()
+		ccTestFiles = list()
+#		ccLearnFiles.append('data\onemonth_2150_0820.pkl')
+		ccLearnFiles.append('data\onemonth_3152_0701.pkl')
+#		ccTestFiles.append('data\oneday_2150_0914.pkl')
+		ccTestFiles.append('data/oneyear_3152_0101.pkl')
+		self.fit_for_a_type(ccLearnFiles, ccTestFiles, 'cc')
+		
+		print "=======================CC STARTs (w/ CONTROL)==========================="
+		ccLearnFiles = []
+		ccLearnFiles.append('data/reg_cc_3152_1001.pkl')
+		ccTestFiles = list()
+		ccTestFiles.append('data/oneyear_3152_0101.pkl')
+		self.fit_for_a_type(ccLearnFiles, ccTestFiles, 'cc')
+		
+		print "=======================ACS and AHS STARTS (w/o CONTROL)==========================="
+		acsahsLearnFiles = []
+		acsahsLearnFiles.append('data\onemonth_2142_0801.pkl')
+		#acsahsLearnFiles.append('data\oneday_2146_1004.pkl')
+		acsahsTestFiles = []
+		acsahsTestFiles.append('data\oneyear_2142_0101.pkl')
+		#acsahsTestFiles.append('data\oneyear_2146_0101.pkl')
+		self.fit_for_a_type(acsahsLearnFiles, acsahsTestFiles, 'acs')
+		self.fit_for_a_type(acsahsLearnFiles, acsahsTestFiles, 'ahs')
+
+		print "=======================ACS and AHS STARTS (w/ CONTROL)==========================="
+		acsahsLearnFiles = []
+		acsahsLearnFiles.append('data\oneday_2142_1004.pkl')
+		#acsahsLearnFiles.append('data\oneday_2146_1004.pkl')
+		acsahsTestFiles = []
+		acsahsTestFiles.append('data\oneyear_2142_0101.pkl')
+		#acsahsTestFiles.append('data\oneyear_2146_0101.pkl')
+		self.fit_for_a_type(acsahsLearnFiles, acsahsTestFiles, 'acs')
+		self.fit_for_a_type(acsahsLearnFiles, acsahsTestFiles, 'ahs')
+		
 		
 
-		#filenameList.append('data\oneyear_2150_0101.pkl')
-
-		#filenameList.append('data\oneweek_4152_0714.pkl')
-		#filenameList.append('data\oneweek_2148_0714.pkl')
-		#filenameList.append('data\onemonth_2150_0820.pkl')
+	def fit_for_a_type(self, filenameList, testfilenameList, key):
+#		#rawDataDict = self.anal.receive_entire_sensors_notstore(datetime(2015,9,29),datetime(2015,9,30,6))
+#		filenameList = list()
+#		testfilenameList = list()
+#		#testfilenameList.append('data\oneweek_4152_0714.pkl')
+#		#testfilenameList.append('data\oneday_2148_0820.pkl')
+#		#testfilenameList.append('data\oneweek_2142_0801.pkl')
+#		testfilenameList.append('data\oneyear_2146_0101.pkl')
+#		
+#		#testfilenameList.append('data\oneweek_2150_0920.pkl')
+#		#filenameList.append('data\oneday_2234_1004.pkl')
+#		#filenameList.append('data\oneday_4150_1004.pkl')
+#		filenameList.append('data\oneday_2146_1004.pkl')
+#		
+#
+#		#filenameList.append('data\oneyear_2150_0101.pkl')
+#
+#		#filenameList.append('data\oneweek_4152_0714.pkl')
+#		#filenameList.append('data\oneweek_2148_0714.pkl')
+#		#filenameList.append('data\onemonth_2150_0820.pkl')
 
 		dataList = list()
 #		for idx, filename in enumerate(filenameList):
@@ -287,37 +333,42 @@ class FindControl:
 		else:
 			dataDict = self.merge_data(dataList[0], dataList[:-1])
 
-		for key, data in dataDict.iteritems():
-			print key
-			print "SVR"
-			
-			#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=SVR(kernel='rbf', verbose=False), filename='figs/rbfSVM.pdf')
-			learn1Idx = data['oc'].values==1
-			learn2Idx = data['oc'].values==2
-			learn3Idx = data['oc'].values==3
-			test1Idx = testDataDict[key]['oc'].values==1
-			test2Idx = testDataDict[key]['oc'].values==2
-			test3Idx = testDataDict[key]['oc'].values==3
+		data = dataDict[key]
+		print '\n'
+		print key
+		
+#		learn1Idx = data['oc'].values==1
+#		learn2Idx = data['oc'].values==2
+#		learn3Idx = data['oc'].values==3
+#		test1Idx = testDataDict[key]['oc'].values==1
+#		test2Idx = testDataDict[key]['oc'].values==2
+#		test3Idx = testDataDict[key]['oc'].values==3
 
-			self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=LinearSVR(verbose=True),filename='figs/linearSVM.pdf')
-			self.fit_data(data[key][learn1Idx], data[learn1Idx].drop([key,'oc'],axis=1), testDataDict[key][key][test1Idx], testDataDict[key][test1Idx].drop([key,'oc'],axis=1), model=LinearSVR(verbose=True, max_iter=5000),filename='figs/linearSVM.pdf')
-			#self.fit_data(data[key][learn2Idx], data[learn2Idx].drop([key,'oc'],axis=1), testDataDict[key][key][test2Idx], testDataDict[key][test2Idx].drop([key,'oc'],axis=1), model=LinearSVR(verbose=True, max_iter=5000),filename='figs/linearSVM.pdf')
-			self.fit_data(data[key][learn3Idx], data[learn3Idx].drop([key,'oc'],axis=1), testDataDict[key][key][test3Idx], testDataDict[key][test3Idx].drop([key,'oc'],axis=1), model=LinearSVR(verbose=True, max_iter=5000),filename='figs/linearSVM.pdf')
-			#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=SVR(kernel='sigmoid', verbose=True), filename='figs/sigmoidSVM.pdf')
-			print "Logistic"
-			#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=LogisticRegression(solver='newton-cg'), filename='figs/newtonLogistic.pdf')
-			#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=LogisticRegression(solver='lbfgs'), filename='figs/lbfgsLogistic.pdf')
-			#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=LogisticRegression(solver='liblinear'), filename='figs/liblinLogistic.pdf')
-			print "Gaussian Naive Bayes"
-			#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=GaussianNB())
-			#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=MultinomialNB())
+		print "Linear Regression"
+		self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=LinearRegression(),filename='figs/'+key+'_linearRegress.pdf')
+		print "Linear SVM"
+		self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=LinearSVR(verbose=True),filename='figs/'+key+'_linearSVM.pdf')
+		print "RBF SVM"
+		self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=SVR(kernel='rbf', verbose=False), filename='figs/'+key+'_rbfSVM.pdf')
+		#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=SVR(kernel='sigmoid', verbose=True), filename='figs/'+key+'_sigmoidSVM.pdf')
+		print " Newton Logistic"
+#		self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=LogisticRegression(solver='newton-cg'), filename='figs/'+key+'_newtonLogistic.pdf')
+		print " LBFGS Logistic"
+		#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=LogisticRegression(solver='lbfgs'), filename='figs/'+key+'_lbfgsLogistic.pdf')
+		print " Liblinear Logistic"
+		#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=LogisticRegression(solver='liblinear'), filename='figs/'+key+'_liblinLogistic.pdf')
+		print "Gaussian Naive Bayes"
+		#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=GaussianNB())
+		#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=MultinomialNB())
 	
 	def fit_data(self, y, xs, testy, testxs, model=SVR(kernel='rbf'),filename='figs/test.pdf'):
 		#svr_rbf = SVR(kernel='rbf', C=1e3, gamma=0.1)
 		#svr_rbf = SVR()
 		fitted = model.fit(xs,y)
 		try:
+			print xs.keys()
 			print model.coef_
+			pass
 		except:
 			pass
 		y_rbf = fitted.predict(xs)
@@ -333,16 +384,20 @@ class FindControl:
 
 		#ax4 = fig.add_subplot(2,2,4,projection='3d')
 		#ax4.scatter(testxs[testxs.keys()[0]],testxs[testxs.keys()[1]],testy_rbf,c='k')
-		rmse = sqrt(mean_squared_error(testy, testy_rbf))
-		normRmse = rmse/np.mean(testy)
+		testRmse = sqrt(mean_squared_error(testy, testy_rbf))
+		learnRmse = sqrt(mean_squared_error(y, y_rbf))
+		normRmse = testRmse/np.mean(testy)
+		print 'Learn RMSE:\t', learnRmse
+		print 'Test RMSE:\t', testRmse
+		print '\n'
 
-		fig = plt.figure()
-		ax1 = fig.add_subplot(121)
-		ax1.plot(y,c='b')
-		ax1.plot(xs[xs.keys()[0]], c='r')
-		ax2 = fig.add_subplot(122)
-		ax2.plot(y, c='b')
-		ax2.plot(xs[xs.keys()[1]], c='r')
+		#fig = plt.figure()
+		#ax1 = fig.add_subplot(121)
+		#ax1.plot(y,c='b')
+		#ax1.plot(xs[xs.keys()[0]], c='r')
+		#ax2 = fig.add_subplot(122)
+		#ax2.plot(y, c='b')
+		#ax2.plot(xs[xs.keys()[1]], c='r')
 		#plt.show()
 
 
@@ -364,12 +419,6 @@ class FindControl:
 		ax2.set_title('Test Data')
 		ax2.legend()
 		plotter.save_fig(fig, filename)
-		plt.show()
-
-		
-		print rmse, normRmse
-		print '\n'
-
-
+		#plt.show()
 		
 		pass

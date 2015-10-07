@@ -126,7 +126,7 @@ class Actuator(object):
 		if self.inputType.validate(val):
 			self.bdm.set_sensor(self.uuid, self.sensorType, tp, val)
 		else:
-			print "Failed to validate a value of " + self.zone + '\'s Common Setpoint to ' + str(givenVal)
+			print "Failed to validate a value of " + self.zone + '\'s Common Setpoint to ' + str(val)
 
 	@abstractmethod
 	def get_value(self, beginTime, endTime):

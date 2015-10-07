@@ -22,7 +22,8 @@ def make_actuator(uuid, name, zone=None, actuType=None):
 	if actuType==actuNames.heatingCommand:
 		return HeatingCommand(name, uuid, 0,100,zone)
 	if actuType==actuNames.actualSupplyFlowSP:
-		return ActualSupplyFlowSP(name, uuid, 0,500,zone) # TODO: This should be dependent on a zone
+		#return ActualSupplyFlowSP(name, uuid, 0,500,zone) # TODO: This should be dependent on a zone
+		return ActualSupplyFlowSP(name, uuid, zone)
 	if actuType==actuNames.damperCommand:
 		return DamperCommand(name, uuid, -0.5,0.5,zone)
 	if actuType==actuNames.occupiedCoolingMinimumFlow:
@@ -35,10 +36,11 @@ def make_actuator(uuid, name, zone=None, actuType=None):
 		print "Failed to make an actuator: incorrect type name, " + actuType
 		return None
 
+actuNames = ActuatorNames()
+
 class CommonSetpoint(Actuator):
 	zone = None
 	template = None
-	actuNames = ActuatorNames()
 
 #TODO: Is it okay to set minVal and maxVal arbitrarily outside this class?
 	def __init__ (self, name, uuid, minVal, maxVal, zone):
@@ -47,7 +49,7 @@ class CommonSetpoint(Actuator):
 		super(CommonSetpoint, self).__init__(timedelta(minutes=10))
 		self.inputType = master_actuator.TempType(minVal, maxVal)
 		self.zone = zone
-		self.template = self.actuNames.commonSetpoint
+		self.template = actuNames.commonSetpoint
 		self.sensorType = 'PresentValue'
 
 	def set_value(self, val, tp):
@@ -66,7 +68,6 @@ class CommonSetpoint(Actuator):
 class ActualCoolingSetpoint(Actuator):
 	zone = None
 	template = None
-	actuNames = ActuatorNames()
 
 #TODO: Is it okay to set minVal and maxVal arbitrarily outside this class?
 	def __init__ (self, name, uuid, minVal, maxVal, zone):
@@ -75,7 +76,7 @@ class ActualCoolingSetpoint(Actuator):
 		super(ActualCoolingSetpoint, self).__init__(timedelta(minutes=2))
 		self.inputType = master_actuator.TempType(minVal, maxVal)
 		self.zone = zone
-		self.template = self.actuNames.actualCoolingSetpoint
+		self.template = actuNames.actualCoolingSetpoint
 		self.sensorType = 'PresentValue'
 
 	def set_value_void(self, val, tp): # This is dummy for test
@@ -105,7 +106,6 @@ class ActualCoolingSetpoint(Actuator):
 class TempOccSts(Actuator):
 	zone = None
 	template = None
-	actuNames = ActuatorNames()
 
 #TODO: Is it okay to set minVal and maxVal arbitrarily outside this class?
 	def __init__ (self, name, uuid, zone):
@@ -114,7 +114,7 @@ class TempOccSts(Actuator):
 		super(TempOccSts, self).__init__(timedelta(minutes=2))
 		self.inputType = master_actuator.TempOcType()
 		self.zone = zone
-		self.template = self.actuNames.tempOccSts
+		self.template = actuNames.tempOccSts
 		self.sensorType = 'PresentValue'
 
 	def set_value(self, val, tp):
@@ -134,7 +134,6 @@ class TempOccSts(Actuator):
 class OccupiedCommand(Actuator):
 	zone = None
 	template = None
-	actuNames = ActuatorNames()
 
 #TODO: Is it okay to set minVal and maxVal arbitrarily outside this class?
 	def __init__ (self, name, uuid, zone):
@@ -143,7 +142,7 @@ class OccupiedCommand(Actuator):
 		super(OccupiedCommand, self).__init__(timedelta(minutes=2))
 		self.inputType = master_actuator.OcType()
 		self.zone = zone
-		self.template = self.actuNames.occupiedCommand
+		self.template = actuNames.occupiedCommand
 		self.sensorType = 'PresentValue'
 
 	def set_value_void(self, val, tp): # This is dummy for test
@@ -173,7 +172,6 @@ class OccupiedCommand(Actuator):
 class CoolingCommand(Actuator):
 	zone = None
 	template = None
-	actuNames = ActuatorNames()
 
 	def __init__(self, name, uuid, minVal, maxVal, zone):
 		self.name = name
@@ -181,7 +179,7 @@ class CoolingCommand(Actuator):
 		super(CoolingCommand, self).__init__(timedelta(minutes=10))
 		self.inputType = master_actuator.PercentType(minVal, maxVal)
 		self.zone = zone
-		self.template = self.actuNames.coolingCommand
+		self.template = actuNames.coolingCommand
 		self.sensorType = 'PresentValue'
 
 	def set_value(self, val, tp):
@@ -196,7 +194,6 @@ class CoolingCommand(Actuator):
 class HeatingCommand(Actuator):
 	zone = None
 	template = None
-	actuNames = ActuatorNames()
 
 	def __init__(self, name, uuid, minVal, maxVal, zone):
 		self.name = name
@@ -204,7 +201,7 @@ class HeatingCommand(Actuator):
 		super(HeatingCommand, self).__init__(timedelta(minutes=10))
 		self.inputType = master_actuator.PercentType(minVal, maxVal)
 		self.zone = zone
-		self.template = self.actuNames.heatingCommand
+		self.template = actuNames.heatingCommand
 		self.sensorType = 'PresentValue'
 
 	def set_value(self, val, tp):
@@ -216,25 +213,27 @@ class HeatingCommand(Actuator):
 	def get_value(self, beginTime, endTime):
 		return super(HeatingCommand, self).get_value(beginTime, endTime)
 
-actuNames = ActuatorNames()
 
 class ActualSupplyFlowSP(Actuator):
 	zone = None
 	template = None
-	actuNames = ActuatorNames()
 
-	def __init__(self, name, uuid, minVal, maxVal, zone):
+	#def __init__(self, name, uuid, minVal, maxVal, zone):
+	def __init__(self, name, uuid, zone):
+		super(ActualSupplyFlowSP, self).__init__(timedelta(minutes=10))
 		self.name = name
 		self.uuid = uuid
+		self.zone = zone
+		self.template = actuNames.actualSupplyFlowSP
+		self.sensorType = 'PresentValue'
 		#TODO: set the max and min by those values
 		maxflowUuid = self.bdm.get_sensor_uuids({'room':zone, 'template':'Cooling Max Flow'})[0]
-		minHeatingFlowUuid = self.bdm.get_sensor_uuids({'room':zone, 'tempalte':'Occupied Htg Flow'})[0]
+		minHeatingFlowUuid = self.bdm.get_sensor_uuids({'room':zone, 'template':'Occupied Htg Flow'})[0]
 		minCoolingFlowUuid = self.bdm.get_sensor_uuids({'room':zone, 'template':'Occupied Clg Min'})[0]
-		super(ActualSupplyFlowSP, self).__init__(timedelta(minutes=10))
+		minVal = self.bdm.get_zone_sensor_ts(self.zone, 'Occupied Clg Min', self.sensorType, datetime.now()-timedelta(hours=1), datetime.now())[0]
+		maxVal = self.bdm.get_zone_sensor_ts(self.zone, 'Cooling Max Flow', self.sensorType, datetime.now()-timedelta(hours=1), datetime.now())[0]
+		#self.inputType = master_actuator.FlowType(minVal, maxVal)
 		self.inputType = master_actuator.FlowType(minVal, maxVal)
-		self.zone = zone
-		self.template = self.actuNames.actualSupplyFlowSP
-		self.sensorType = 'PresentValue'
 
 	def set_value(self, val, tp):
 		super(ActualSupplyFlowSP, self).set_value(val, tp)
@@ -274,7 +273,7 @@ class OccupiedCoolingMinimumFlow(Actuator):
 		self.name = name
 		self.uuid = uuid
 		super(OccupiedCoolingMinimumFlow, self).__init__(timedelta(minutes=10))
-		self.inputType = master_actuator.FlowType(0,500)
+		self.inputType = master_actuator.FlowType(0,200)
 		self.zone = zone
 		self.template = actuNames.occupiedCoolingMinimumFlow
 		self.sensorType = 'PresentValue'
@@ -287,3 +286,45 @@ class OccupiedCoolingMinimumFlow(Actuator):
 	
 	def get_value(self, beginTime, endTime):
 		return super(OccupiedCoolingMinimumFlow, self).get_value(beginTime, endTime)
+
+class CoolingMaxFlow(Actuator):
+	zone = None
+	template = None
+	def __init__(self, name, uuid, minVal, maxVal, zone):
+		self.name = name
+		self.uuid = uuid
+		super(CoolingMaxFlow, self).__init__(timedelta(minutes=10))
+		self.inputType = master_actuator.FlowType(300,1000)
+		self.zone = zone
+		self.template = actuNames.occupiedCoolingMinimumFlow
+		self.sensorType = 'PresentValue'
+	
+	def set_value(self, val, tp):
+		super(CoolingMaxFlow, self).set_value(val, tp)
+	
+	def reset_value(self, val, tp):
+		super(CoolingMaxFlow, self).reset_value(val, tp)
+	
+	def get_value(self, beginTime, endTime):
+		return super(CoolingMaxFlow, self).get_value(beginTime, endTime)
+
+class OccupiedHeatingFlow(Actuator):
+	zone = None
+	template = None
+	def __init__(self, name, uuid, minVal, maxVal, zone):
+		self.name = name
+		self.uuid = uuid
+		super(OccupiedHeatingFlow, self).__init__(timedelta(minutes=10))
+		self.inputType = master_actuator.FlowType(0,200)
+		self.zone = zone
+		self.template = actuNames.occupiedCoolingMinimumFlow
+		self.sensorType = 'PresentValue'
+	
+	def set_value(self, val, tp):
+		super(OccupiedHeatingFlow, self).set_value(val, tp)
+	
+	def reset_value(self, val, tp):
+		super(OccupiedHeatingFlow, self).reset_value(val, tp)
+	
+	def get_value(self, beginTime, endTime):
+		return super(OccupiedHeatingFlow, self).get_value(beginTime, endTime)

@@ -8,8 +8,8 @@ finder = FindControl()
 
 if len(sys.argv)>1:
 	if sys.argv[1]=='1':
-		pdb.run("finder.organize_data()")
+		pdb.run("finder.fit_all_types()")
 	else:
-		finder.organize_data()
+		finder.fit_all_types()
 else:
-	finder.organize_data()
+	finder.fit_all_types()

@@ -13,6 +13,7 @@ import pickle
 import csv
 import json
 from quiver import QRError
+from copy import deepcopy
 
 
 class Analyzer:
@@ -188,6 +189,8 @@ class Analyzer:
 	def receive_zone_sensors(self, zone, beginTime, endTime, normType):
 		zoneDict = dict()
 		for actuType in self.actuNames.nameList+self.sensorNames.nameList:
+			if actuType=='Occupied Htg Flow':
+				pass
 			try:
 				uuid = self.get_actuator_uuid(zone, actuType)
 			except QRError:
@@ -211,4 +214,3 @@ class Analyzer:
 		data = self.receive_zone_sensors(zone, beginTime, endTime, normType)
 		with open(filename, 'wb') as fp:
 			pickle.dump(data, fp)
-
