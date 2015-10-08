@@ -32,7 +32,8 @@ class Analyzer:
 		self.sensorNames = SensorNames()
 		self.bdm = BDWrapper()
 		self.expLogColl = CollectionWrapper('experience_log')
-		self.zonelist = self.csv2list('metadata/partialzonelist.csv')
+		#self.zonelist = self.csv2list('metadata/partialzonelist.csv')
+		self.zonelist = self.csv2list('metadata/zonelist.csv')
 		self.feater = FeatureExtractor()
 		self.clust = Clusterer()
 	

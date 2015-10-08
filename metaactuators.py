@@ -4,6 +4,10 @@ from master_actuator import Actuator
 import actuator_names
 reload(actuator_names)
 from actuator_names import ActuatorNames
+import sensor_names
+reload(sensor_names)
+from sensor_names import SensorNames
+from bd_wrapper import BDWrapper
 
 from datetime import datetime, timedelta
 
@@ -37,8 +41,10 @@ def make_actuator(uuid, name, zone=None, actuType=None):
 		return None
 
 actuNames = ActuatorNames()
+sensorNames = SensorNames()
 
 class CommonSetpoint(Actuator):
+	bdm = BDWrapper()
 	zone = None
 	template = None
 
@@ -53,6 +59,13 @@ class CommonSetpoint(Actuator):
 		self.sensorType = 'PresentValue'
 
 	def set_value(self, val, tp):
+		if val=='ZT':
+			ztuuid = self.bdm.get_sensor_uuids({'room':self.zone, 'template':sensorNames.zoneTemperature})[0]
+			now = datetime.now()
+			currZT = self.bdm.get_sensor_ts(ztuuid, 'PresentValue', now-timedelta(hours=1), now).tail().tolist()[0]
+			val = currZT
+		else:
+			pass
 		super(CommonSetpoint, self).set_value(val, tp+timedelta(minutes=1))
 	
 	def get_value(self, beginTime, endTime):

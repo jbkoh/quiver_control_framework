@@ -83,7 +83,10 @@ class TempType(DefaultType):
 		#TODO Is hardMaxVal correct for temp type?
 
 	def validate(self, given):
-		return super(TempType,self).validate(given)
+		if given=='ZT':
+			return True
+		else:
+			return super(TempType,self).validate(given)
 
 class PercentType(DefaultType):
 	def __init__(self, minVal, maxVal):

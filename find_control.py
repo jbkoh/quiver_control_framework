@@ -232,18 +232,26 @@ class FindControl:
 
 	def fit_all_types(self):
 		
+		print "=======================ASFSP STARTS (w/ CONTROL)==========================="
+		ccLearnFiles = list()
+		ccTestFiles = list()
+		ccLearnFiles.append('data/reg_safsp_3256_1006.pkl')
+		ccTestFiles.append('data/oneyear_3256_0101.pkl')
+		self.fit_for_a_type(ccLearnFiles, ccTestFiles, 'asfsp')
+		
 		print "=======================ASFSP STARTS (w/o CONTROL)==========================="
 		ccLearnFiles = list()
 		ccTestFiles = list()
-		ccLearnFiles.append('data\onemonth_3256_0901.pkl')
+		ccLearnFiles.append('data/onemonth_3256_0901.pkl')
 		ccTestFiles.append('data/oneyear_3256_0101.pkl')
 		self.fit_for_a_type(ccLearnFiles, ccTestFiles, 'asfsp')
+
 		
 		print "=======================CC STARTS (w/o CONTROL)==========================="
 		ccLearnFiles = list()
 		ccTestFiles = list()
 #		ccLearnFiles.append('data\onemonth_2150_0820.pkl')
-		ccLearnFiles.append('data\onemonth_3152_0701.pkl')
+		ccLearnFiles.append('data\onemonth_3152_0801.pkl')
 #		ccTestFiles.append('data\oneday_2150_0914.pkl')
 		ccTestFiles.append('data/oneyear_3152_0101.pkl')
 		self.fit_for_a_type(ccLearnFiles, ccTestFiles, 'cc')
@@ -344,11 +352,11 @@ class FindControl:
 #		test2Idx = testDataDict[key]['oc'].values==2
 #		test3Idx = testDataDict[key]['oc'].values==3
 
-		print "Linear Regression"
+		print "------Linear Regression------"
 		self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=LinearRegression(),filename='figs/'+key+'_linearRegress.pdf')
-		print "Linear SVM"
+		print "------Linear SVM------"
 		self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=LinearSVR(verbose=True),filename='figs/'+key+'_linearSVM.pdf')
-		print "RBF SVM"
+		print "------RBF SVM------"
 		self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=SVR(kernel='rbf', verbose=False), filename='figs/'+key+'_rbfSVM.pdf')
 		#self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=SVR(kernel='sigmoid', verbose=True), filename='figs/'+key+'_sigmoidSVM.pdf')
 		print " Newton Logistic"
@@ -419,6 +427,6 @@ class FindControl:
 		ax2.set_title('Test Data')
 		ax2.legend()
 		plotter.save_fig(fig, filename)
-		#plt.show()
+#		plt.show()
 		
 		pass

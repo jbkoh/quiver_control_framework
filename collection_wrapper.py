@@ -74,6 +74,10 @@ class CollectionWrapper:
 		else:
 			print 'Input row does not follow DefaultRow\'s format'
 			return False
+	def update_row(self, row):
+		rowID =pd.DataFrame(list(self.collection.find({'uuid':row['uuid']})))['_id'][0]
+		result = self.collection.update_one({'_id':rowID}, {'$set':row}, upsert=False)
+		print result.matched_count, " are changed"
 	
 	def load_dataframe(self, query):
 		self.lock.acquire()

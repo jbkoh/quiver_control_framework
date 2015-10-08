@@ -361,7 +361,9 @@ class Quiver:
 			# TODO: Think about timing here
 			# What if a value is reset then temporal current value is restored?
 			# Temporarily do not check the case where setVal==-1.
-			if (setVal!=-1 and latestVal != setVal):
+			if setVal=='-1':
+				pass
+			elif (setVal!=-1 and latestVal != setVal):
 				latestVal, setTime = actuator.get_second_latest_value(self.now())
 				if setVal!=-1 and latestVal != setVal:
 					initialIssueFlagList[row[0]] = False
@@ -385,11 +387,6 @@ class Quiver:
 				origVal = row[1]['original_value']
 				actuator = self.actuDict[uuid]
 
-				#if setVal==-1: #TODO: This is temporary version need to check
-				#	issueFlagList[idx] = True
-				#	seq.loc[idx, 'set_time'] = uploadedTimeList[idx]
-				#	continue 
-
 				if setVal == -1:
 					ackVal = row[1]['reset_value']
 				else:
@@ -404,7 +401,8 @@ class Quiver:
 					seq.loc[idx, 'set_time'] = uploadedTimeList[idx]
 					logging.debug("Received a ack of a command: \n%s", repr(row[1]))
 					if setVal==-1:
-						actuator.set_value(currVal, uploadedTimeList[idx])
+						#actuator.reset_value(currVal, uploadedTimeList[idx])
+						pass
 					continue
 				now = self.now()
 				if now>=uploadedTimeList[idx]+resendInterval:
