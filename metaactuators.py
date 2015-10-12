@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 def make_actuator(uuid, name, zone=None, actuType=None):
 	actuNames = ActuatorNames()
 	if actuType==actuNames.commonSetpoint:
-		return CommonSetpoint(name, uuid, 64,76,zone)
+		return CommonSetpoint(name, uuid, 60, 80, zone)
 	if actuType==actuNames.occupiedCommand:
 		return OccupiedCommand(name, uuid, zone)
 	if actuType==actuNames.coolingCommand:

@@ -187,15 +187,50 @@ def plot_colormap(data, figSizeIn, xlabel, ylabel, cbarlabel, cmapIn, ytickRange
 	plt.show()
 	return fig
 
-def plot_colormap_upgrade(data, figSizeIn, xlabel, ylabel, cbarlabel, cmapIn, ytickRange, ytickTag, xtickRange=None, xtickTag=None, title=None, xmin=None, xmax=None, xgran=None, ymin=None, ymax=None, ygran=None):
+def plot_colormap_upgrade2(data, xlabel=None, ylabel=None, cbarLabel=None, cmapIn=None, ytickRange=None, ytickTag=None, xtickRange=None, xtickTag=None, title=None, xmin=None, xmax=None, xgran=None, ymin=None, ymax=None, figSizeIn=None, ygran=None, fig=None, ax=None):
+	if fig==None:
+		fig, ax = plt.subplots(1,1)
 	if xmin != None:
 		y, x = np.mgrid[slice(ymin, ymax + ygran, ygran),
 				slice(xmin, xmax + xgran, xgran)]
-		fig = plt.figure(figsize = figSizeIn)
+#		plt.pcolor(data, cmap=cmapIn)
+		p = ax.pcolormesh(x, y, data, cmap=cmapIn)
+		ax.grid(which='major',axis='both')
+		ax.set_axes([x.min()-1, x.max()+1, y.min(), y.max()])
+	else:
+		p = ax.pcolormesh(data, cmap=cmapIn)
+
+	cbar = fig.colorbar(p)
+	cbar.set_label(cbarLabel, labelpad=-0.1)
+	if xlabel!=None:
+		ax.set_xlabel(xlabel)
+
+	if ylabel!=None:
+		ax.set_ylabel(ylabel)
+#	if xtickTag:
+#		plt.xticks(xtickRange, xtickTag, fontsize=10)
+#
+#	plt.yticks(ytickRange, ytickTag, fontsize=10)
+	if xmin!=None and xmax!= None:
+		ax.set_xlim((xmin-1, xmax+1))
+	if ymin!=None and ymax!=None:
+		ax.set_ylim((ymin-1, ymax+1))
+	if title:
+		ax.set_title(title)
+	plt.tight_layout()
+	plt.show()
+	return fig
+
+
+def plot_colormap_upgrade(data, figSizeIn, xlabel, ylabel, cbarlabel, cmapIn, ytickRange, ytickTag, xtickRange=None, xtickTag=None, title=None, xmin=None, xmax=None, xgran=None, ymin=None, ymax=None, ygran=None):
+	fig = plt.figure(figsize = figSizeIn)
+	if xmin != None:
+		y, x = np.mgrid[slice(ymin, ymax + ygran, ygran),
+				slice(xmin, xmax + xgran, xgran)]
 #		plt.pcolor(data, cmap=cmapIn)
 		plt.pcolormesh(x, y, data, cmap=cmapIn)
 		plt.grid(which='major',axis='both')
-		plt.axis([x.min(), x.max(), y.min(), y.max()])
+		plt.axis([x.min()-1, x.max()+1, y.min(), y.max()])
 	else:
 		plt.pcolor(data, cmap=cmapIn)
 
@@ -208,37 +243,61 @@ def plot_colormap_upgrade(data, figSizeIn, xlabel, ylabel, cbarlabel, cmapIn, yt
 #
 #	plt.yticks(ytickRange, ytickTag, fontsize=10)
 	plt.tight_layout()
+	if xmin!=None and xmax!= None:
+		plt.xlim((xmin-1, xmax+1))
+	if ymin!=None and ymax!=None:
+		plt.ylim((ymin-1, ymax+1))
 	if title:
 		plt.title(title)
 	plt.show()
 	return fig
 
-def plot_timeseries(x, y, xlabel=None, ylabel=None,  xticks=None, xtickTags=None, yticks=None, ytickTags=None, title=None, xtickRotate=None, dateFormat=None,color=None, axis=None, fig=None, dataLabel=None):
+def plot_timeseries(x, y, xlabel=None, ylabel=None,  xticks=None, xtickTags=None, yticks=None, ytickTags=None, title=None, xtickRotate=None, dateFormat=None,color=None, axis=None, fig=None, dataLabel=None, ymin=None, ymax=None, xmax=None, xmin=None, ytickRotate=None):
 	if axis==None:
 		fig, axis = plt.subplots(1,1)
 	
 	plotObj = axis.plot_date(x, y, linestyle='-', marker='None',tz=pst, color=color, label=dataLabel)
+	if xmin!=None and xmax!= None:
+		axis.set_xlim((xmin-1, xmax+1))
+	if ymin!=None and ymax!=None:
+		axis.set_ylim((ymin, ymax))
+
+	xtickFontSize = 7
+	ytickFontSize = 7
+	ylabelFontSize = 7
 
 	if xlabel!=None:
 		axis.set_xlabel
 	if ylabel!=None:
-		axis.set_ylabel(ylabel)
+		axis.set_ylabel(ylabel, fontsize=ylabelFontSize)
 	if xticks:
-		axis.set_xticks(xticks[i])
+		axis.set_xticks(xticks)
 	if xtickTags:
-		axis.set_xticklabels(xtickTags[i])
-	if yticks:
-		axis.set_yticks(yticks[i])
-	if ytickTags:
-		axis.set_yticklabels(ytickTags[i])
+		axis.set_xticklabels(xtickTags)
+	if yticks != None:
+		axis.set_yticks(yticks)
+	if ytickTags!=None:
+		ytickLabel = ytickTags
+	else:
+		ytickLabel = axis.get_yticks().tolist()
 	if title:
 		axis.set_title(title)
 	if xtickRotate != None:
 		xtickLabel = axis.get_xticklabels()
-		axis.set_xticklabels(xtickLabel, rotation=xtickRotate, fontsize=8)
+		axis.set_xticklabels(xtickLabel, rotation=xtickRotate, fontsize=xtickFontSize)
+	else:
+		xtickLabel = axis.get_xticklabels()
+		axis.set_xticklabels(xtickLabel, fontsize=xtickFontSize)
+#	ytickLabel = [item.get_text() for item in axis.get_yticklabels()]
+	axis.set_yticklabels(ytickLabel, fontsize=ytickFontSize,rotation=ytickRotate)
+	
 	#fig.autofmt_xdate()
 	if dateFormat!=None:
 		axis.xaxis.set_major_formatter(dateFormat)
+	
+	if title!=None:
+		axis.set_title(title)
+		
 	
 	return fig, axis, plotObj
 

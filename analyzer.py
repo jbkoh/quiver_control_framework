@@ -143,6 +143,7 @@ class Analyzer:
 		
 
 	def receive_a_sensor(self, zone, actuType, beginTime, endTime, normType):
+		print zone, actuType
 		uuid = self.get_actuator_uuid(zone, actuType)
 		rawData = self.bdm.get_sensor_ts(uuid, 'PresentValue', beginTime, endTime)
 		if actuType!=self.actuNames.damperCommand:
@@ -190,8 +191,6 @@ class Analyzer:
 	def receive_zone_sensors(self, zone, beginTime, endTime, normType):
 		zoneDict = dict()
 		for actuType in self.actuNames.nameList+self.sensorNames.nameList:
-			if actuType=='Occupied Htg Flow':
-				pass
 			try:
 				uuid = self.get_actuator_uuid(zone, actuType)
 			except QRError:

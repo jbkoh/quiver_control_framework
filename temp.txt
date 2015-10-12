@@ -1,0 +1,33 @@
+
+def plot_colormap_upgrade(data, xlabel=None, ylabel=None, cbarlabel=None, cmapIn=None, ytickRange=None, ytickTag=None, xtickRange=None, xtickTag=None, title=None, xmin=None, xmax=None, xgran=None, ymin=None, ymax=None, figSizeIn=None, ygran=None, fig=None, ax=None):
+	if fig==None:
+		fig, ax = plt.subplots(1,1)
+	if xmin != None:
+		y, x = np.mgrid[slice(ymin, ymax + ygran, ygran),
+				slice(xmin, xmax + xgran, xgran)]
+#		plt.pcolor(data, cmap=cmapIn)
+		ax.pcolormesh(x, y, data, cmap=cmapIn)
+		ax.grid(which='major',axis='both')
+		ax.set_axes([x.min()-1, x.max()+1, y.min(), y.max()])
+	else:
+		plt.pcolor(data, cmap=cmapIn)
+
+	cbar = plt.colorbar()
+	cbar.set_label(cbarlabel, labelpad=-0.1)
+	if xlabel!=None:
+		plt.xlabel(xlabel)
+
+	plt.ylabel(ylabel)
+#	if xtickTag:
+#		plt.xticks(xtickRange, xtickTag, fontsize=10)
+#
+#	plt.yticks(ytickRange, ytickTag, fontsize=10)
+	plt.tight_layout()
+	if xmin!=None and xmax!= None:
+		plt.xlim((xmin-1, xmax+1))
+	if ymin!=None and ymax!=None:
+		plt.ylim((ymin-1, ymax+1))
+	if title:
+		plt.title(title)
+	plt.show()
+	return fig

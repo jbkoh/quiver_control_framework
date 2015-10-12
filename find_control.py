@@ -14,13 +14,16 @@ from mpl_toolkits.mplot3d import Axes3D
 from datetime import datetime, timedelta
 from math import sqrt
 from sklearn.metrics import mean_squared_error
-from sklearn.svm import SVR, LinearSVR
+from sklearn.svm import SVR, LinearSVR, OneClassSVM
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import GaussianNB, MultinomialNB
 from sklearn.linear_model import LinearRegression
+from sklearn.covariance import EllipticEnvelope
 from copy import deepcopy
 import scipy.fftpack as fftpack
 from statsmodels.nonparametric.smoothers_lowess import lowess
+from scipy.stats import gaussian_kde
+import matplotlib.cm as cm
 
 
 
@@ -47,7 +50,7 @@ class FindControl:
 			dataDict = pickle.load(fp)
 			for zone in self.testlist:
 				data[zone] = pd.DataFrame.from_dict(dataDict[zone])
-		return data
+		return date
 
 	def make_most_influence_dict(self, df):
 		sensorList = np.array(df.keys())
@@ -103,6 +106,11 @@ class FindControl:
 		else:
 			return data.shift(period).fillna(method='ffill')
 	
+	def export_arranged_data(self, filename):
+		with open(filename, 'rb') as fp:
+			rawdata = pickle.load(fp)
+			return self.arrange_data(rawdata)
+	
 	def arrange_data(self, zoneData):
 		oc = zoneData[self.actuNames.occupiedCommand]
 		cs = zoneData[self.actuNames.commonSetpoint]
@@ -152,9 +160,9 @@ class FindControl:
 		acs_diff_lag6 = self.shift_fill(acs_diff,6)
 
 		#acsDF = pd.DataFrame({'acs':acs, 'cs':cs, 'oc':newoc, 'wcad':wcad, 'const':const})
-		acsDF = pd.DataFrame({'acs':acs, 'cs':newcs, 'oc':newoc, 'const':const})
+		acsDF = pd.DataFrame({'acs':acs, 'cs':newcs, 'oc':newoc})
 		#ahsDF = pd.DataFrame({'ahs':ahs, 'cs':cs, 'oc':oc, 'tempocc':tempocc, 'wcad':wcad})
-		ahsDF = pd.DataFrame({'ahs':ahs, 'cs':newcs, 'oc':newoc, 'const':const})
+		ahsDF = pd.DataFrame({'ahs':ahs, 'cs':newcs, 'oc':newoc})
 
 
 		#ccDF = pd.DataFrame({'cc':cc, 'zt':zt, 'acs':acs, 'maxcc':maxcc, 'mincc':mincc})
@@ -172,8 +180,6 @@ class FindControl:
 		output['asfsp'] = asfspDF
 		#output['dc'] = dcDF
 		return output
-
-
 
 	def download_control_data(self):
 		reqList = list()
@@ -207,8 +213,6 @@ class FindControl:
 			newDF = pd.DataFrame({'acs':acsList, 'cs':csList, 'oc':ocList})
 			acsDF = pd.concat([acsDF, newDF])
 
-
-
 	def merge_data(self, data1, dataList):
 		dataDict = dict()
 		for key in data1.iterkeys():
@@ -232,36 +236,56 @@ class FindControl:
 
 	def fit_all_types(self):
 		
+		print "=======================CC STARTS (w/o CONTROL)==========================="
+		ccLearnFiles = list()
+		ccTestFiles = list()
+		ccAuxFiles = list()
+#		ccLearnFiles.append('data\onemonth_2150_0820.pkl')
+		ccAuxFiles.append('data\onemonth_3152_0801.pkl')
+		ccLearnFiles.append('data/reg_cc_3152_1001.pkl')
+#		ccTestFiles.append('data\oneday_2150_0914.pkl')
+		ccTestFiles.append('data/oneyear_3152_0101.pkl')
+		self.fit_for_a_type(ccLearnFiles, ccTestFiles, 'cc', auxFileList=ccAuxFiles)
+		
+		
+		print "=======================ASFSP STARTS (MIXED)==========================="
+		ccLearnFiles = list()
+		ccTestFiles = list()
+		ccAuxFiles = list()
+		ccAuxFiles.append('data/onemonth_3256_0901.pkl')
+		ccLearnFiles.append('data/reg_safsp_3256_1006.pkl')
+		ccTestFiles.append('data/oneyear_3256_0701.pkl')
+		self.fit_for_a_type(ccLearnFiles, ccTestFiles, 'asfsp',auxFileList=ccAuxFiles)
+
+
+		print "=======================ASFSP STARTS (w/o CONTROL)==========================="
+		ccLearnFiles = list()
+		ccTestFiles = list()
+		ccLearnFiles.append('data/onemonth_3256_0901.pkl')
+		ccTestFiles.append('data/oneyear_3256_0701.pkl')
+		self.fit_for_a_type(ccLearnFiles, ccTestFiles, 'asfsp')
+
+		
+		
 		print "=======================ASFSP STARTS (w/ CONTROL)==========================="
 		ccLearnFiles = list()
 		ccTestFiles = list()
 		ccLearnFiles.append('data/reg_safsp_3256_1006.pkl')
 		ccTestFiles.append('data/oneyear_3256_0101.pkl')
 		self.fit_for_a_type(ccLearnFiles, ccTestFiles, 'asfsp')
-		
-		print "=======================ASFSP STARTS (w/o CONTROL)==========================="
-		ccLearnFiles = list()
-		ccTestFiles = list()
-		ccLearnFiles.append('data/onemonth_3256_0901.pkl')
-		ccTestFiles.append('data/oneyear_3256_0101.pkl')
-		self.fit_for_a_type(ccLearnFiles, ccTestFiles, 'asfsp')
 
-		
-		print "=======================CC STARTS (w/o CONTROL)==========================="
-		ccLearnFiles = list()
-		ccTestFiles = list()
-#		ccLearnFiles.append('data\onemonth_2150_0820.pkl')
-		ccLearnFiles.append('data\onemonth_3152_0801.pkl')
-#		ccTestFiles.append('data\oneday_2150_0914.pkl')
-		ccTestFiles.append('data/oneyear_3152_0101.pkl')
-		self.fit_for_a_type(ccLearnFiles, ccTestFiles, 'cc')
-		
-		print "=======================CC STARTs (w/ CONTROL)==========================="
-		ccLearnFiles = []
-		ccLearnFiles.append('data/reg_cc_3152_1001.pkl')
-		ccTestFiles = list()
-		ccTestFiles.append('data/oneyear_3152_0101.pkl')
-		self.fit_for_a_type(ccLearnFiles, ccTestFiles, 'cc')
+		print "=======================ACS and AHS STARTS (MIXED)==========================="
+		acsahsLearnFiles = []
+		acsahsAuxFiles = []
+		acsahsAuxFiles.append('data\onemonth_2142_0801.pkl')
+		acsahsLearnFiles.append('data\oneday_2142_1004.pkl')
+
+		#acsahsLearnFiles.append('data\oneday_2146_1004.pkl')
+		acsahsTestFiles = []
+		acsahsTestFiles.append('data\oneyear_2142_0101.pkl')
+		#acsahsTestFiles.append('data\oneyear_2146_0101.pkl')
+		self.fit_for_a_type(acsahsLearnFiles, acsahsTestFiles, 'acs', auxFileList=acsahsAuxFiles)
+		self.fit_for_a_type(acsahsLearnFiles, acsahsTestFiles, 'ahs')
 		
 		print "=======================ACS and AHS STARTS (w/o CONTROL)==========================="
 		acsahsLearnFiles = []
@@ -282,10 +306,109 @@ class FindControl:
 		#acsahsTestFiles.append('data\oneyear_2146_0101.pkl')
 		self.fit_for_a_type(acsahsLearnFiles, acsahsTestFiles, 'acs')
 		self.fit_for_a_type(acsahsLearnFiles, acsahsTestFiles, 'ahs')
-		
-		
 
-	def fit_for_a_type(self, filenameList, testfilenameList, key):
+		
+		
+		print "=======================CC STARTS (w/o CONTROL)==========================="
+		ccLearnFiles = list()
+		ccTestFiles = list()
+#		ccLearnFiles.append('data\onemonth_2150_0820.pkl')
+		ccLearnFiles.append('data\onemonth_3152_0801.pkl')
+#		ccTestFiles.append('data\oneday_2150_0914.pkl')
+		ccTestFiles.append('data/oneyear_3152_0101.pkl')
+		self.fit_for_a_type(ccLearnFiles, ccTestFiles, 'cc')
+		
+		print "=======================CC STARTs (w/ CONTROL)==========================="
+		ccLearnFiles = []
+		ccLearnFiles.append('data/reg_cc_3152_1001.pkl')
+		ccTestFiles = list()
+		ccTestFiles.append('data/oneyear_3152_0101.pkl')
+		self.fit_for_a_type(ccLearnFiles, ccTestFiles, 'cc')
+
+	def remove_same_rows(self, df):
+		newDF = pd.DataFrame(df[0])
+		for row in df.iterrows():
+			if not row[1] in newDF:
+					newDF.append(row[1])
+		return newDF
+
+
+	def compress_aux_data(self, auxDataDict, dataLen):
+		key = 'acs'
+#		#model = OneClassSVM(kernel='linear')
+#		model = EllipticEnvelope()
+#		fitted = model.fit(auxDataDict.drop(key='acs', axis=1), auxDataDict['acs'])
+##		decFunc = model.decision_function(auxDataDict)
+#		output = fitted.predict(auxDataDict.drop(key='acs',axis=1))
+#		print len(output[output==-1])
+#		np.savetxt('result/svcresult.csv',output,delimiter='\n')
+		model = LinearRegression()
+		fitted = model.fit(auxDataDict.drop(key, axis=1), auxDataDict[key])
+		predicted = fitted.predict(auxDataDict.drop(key, axis=1))
+		predDiff = abs(auxDataDict[key]-predicted)
+		sortedPredDiff = predDiff.sort(ascending=False)
+		seledtedSamples = auxDataDict[0:dataLen]
+		return selectedSamples
+	
+	def duplicate_data(self, data, num):
+		for key, df in data.iteritems():
+#			for i in range(0, num/len(df)-1):
+				#df = df.append(df.iloc[i-len(df)], ignore_index=True)
+#				df = df.append(df)
+#			data[key] = df
+			df = df.append([df]*(num/len(df)-1), ignore_index=True)
+			data[key] = df
+		return data
+
+	
+	def plot_rawdata(self, y, xs):
+		for key, x in xs.iterkv():
+			xmin = min(x)
+			ymin = min(y)
+			ymax = max(y)
+			xmax = max(x)
+			ynum = 10
+			xnum = 10
+			ygran = (ymax-ymin)/ynum
+			xgran = (xmax-xmin)/xnum
+			if (ymax-ymin)<=10:
+				ynum = int(ymax-ymin)+1
+				ygran = 1
+			if (xmax-xmin)<=10:
+				xnum = xmax-xmin
+				xnum = int(xmax-xmin)+1
+				xgran = 1
+			tmap = np.ndarray([ynum, xnum], offset=0)
+			for i in range(0,xnum):
+				for j in range(0,ynum):
+					tmap[j,i] = 0
+			for idx, val in y.iterkv():
+				#xidx = round((x[idx]-xmin)/xgran)
+				xidx = (int(x[idx])-int(xmin))/xgran
+				yidx = (int(val)-int(ymin))/ygran
+				if xidx<0:
+					xidx = 0
+				if yidx<0:
+					yidx = 0
+				if xidx>=xnum:
+					xidx = xnum-1
+				if yidx>=ynum:
+					yidx = ynum-1
+
+				tmap[yidx, xidx] +=1 
+
+			
+			#plt.scatter(x,y,z,s=50,edgecolor='')
+			#plt.title(key)
+			#plt.show()
+#			fig, ax = plt.subplots(1,1)
+			print "xmin: ", xmin, "xmax: ", max(x)
+			print "ymin: ", ymin, 'ymax: ', max(y)
+			ytickRange = np.arange(0,ynum+1)
+			#plotter.plot_colormap_upgrade(tmap, (12,8), key, 'Y', 'density', cm.Blues, ytickRange, [], xmin=int(xmin), xmax=int(xmax), ymin=int(ymin), ymax=int(ymax), ygran=ygran, xgran=xgran)
+			plotter.plot_colormap_upgrade(tmap, (12,8), key, 'Y', 'density', cm.Blues, ytickRange, [])
+
+	def fit_for_a_type(self, filenameList, testfilenameList, key, auxFileList=None ):
 #		#rawDataDict = self.anal.receive_entire_sensors_notstore(datetime(2015,9,29),datetime(2015,9,30,6))
 #		filenameList = list()
 #		testfilenameList = list()
@@ -306,7 +429,6 @@ class FindControl:
 #		#filenameList.append('data\oneweek_2148_0714.pkl')
 #		#filenameList.append('data\onemonth_2150_0820.pkl')
 
-		dataList = list()
 #		for idx, filename in enumerate(filenameList):
 #			with open(filename, 'rb') as fp:
 #				data = pickle.load(fp)
@@ -317,31 +439,46 @@ class FindControl:
 
 		#for zone in self.testlist:
 		#	dataList.append(self.arrange_data(rawDataDict[zone]))
+		auxDataList = list()
+		if auxFileList!=None:
+			for idx, filename in enumerate(auxFileList):
+				with open(filename,'rb') as fp:
+					rawDataDict = pickle.load(fp)
+					arrangedData = self.arrange_data(rawDataDict)
+					auxDataList.append(arrangedData)
+			if len(auxDataList)==1:
+				auxDataDict = auxDataList[0]
+			else:
+				auxDataDict = self.merge_data(auxDataList[0], auxDataList[:-1])
+		
+		dataList = list()
 		for idx, filename in enumerate(filenameList):
 			with open(filename,'rb') as fp:
 				rawDataDict = pickle.load(fp)
 				arrangedData = self.arrange_data(rawDataDict)
 				dataList.append(arrangedData)
-		
-		testDataList = list()
-		for idx, filename in enumerate(testfilenameList):
-			with open(filename,'rb') as fp:
-				rawDataDict = pickle.load(fp)
-				testDataList.append(self.arrange_data(rawDataDict))
-
-		if len(testDataList)==1:
-			testDataDict = testDataList[0]
-		else:
-			testDataDict=  self.merge_data(testDataList[0], testDataList[:-1])
-
-#		dataList.append(self.arrange_data(rawDataDict))
-
 		if len(dataList)==1:
 			dataDict = dataList[0]
 		else:
 			dataDict = self.merge_data(dataList[0], dataList[:-1])
 
-		data = dataDict[key]
+		if auxFileList!=None:
+			dataDict = self.duplicate_data(dataDict, len(auxDataDict[auxDataDict.keys()[0]]))
+
+
+		testDataList = list()
+		for idx, filename in enumerate(testfilenameList):
+			with open(filename,'rb') as fp:
+				rawDataDict = pickle.load(fp)
+				testDataList.append(self.arrange_data(rawDataDict))
+		if len(testDataList)==1:
+			testDataDict = testDataList[0]
+		else:
+			testDataDict=  self.merge_data(testDataList[0], testDataList[:-1])
+
+		data = dataDict[key].append(auxDataDict[key], ignore_index=True)
+#		data = dataDict[key]
+		
 		print '\n'
 		print key
 		
@@ -351,6 +488,8 @@ class FindControl:
 #		test1Idx = testDataDict[key]['oc'].values==1
 #		test2Idx = testDataDict[key]['oc'].values==2
 #		test3Idx = testDataDict[key]['oc'].values==3
+
+		self.plot_rawdata(testDataDict[key][key], testDataDict[key].drop(key,axis=1))
 
 		print "------Linear Regression------"
 		self.fit_data(data[key], data.drop(key,axis=1), testDataDict[key][key], testDataDict[key].drop(key,axis=1), model=LinearRegression(),filename='figs/'+key+'_linearRegress.pdf')
@@ -427,6 +566,6 @@ class FindControl:
 		ax2.set_title('Test Data')
 		ax2.legend()
 		plotter.save_fig(fig, filename)
-#		plt.show()
+		plt.show()
 		
 		pass

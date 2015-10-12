@@ -21,6 +21,7 @@ from sklearn.linear_model import LinearRegression
 from copy import deepcopy
 import scipy.fftpack as fftpack
 from statsmodels.nonparametric.smoothers_lowess import lowess
+from collections import OrderedDict
 
 
 class FindDep:
@@ -30,14 +31,15 @@ class FindDep:
 	sensorNames = None
 	bdm = None
 	anal = None
-
+	outputfile = None
+	allKeys = ['cs', 'oc', 'acs', 'ahs', 'zt', 'cc', 'hc', 'rvc', 'cmf', 'ocm', 'ohf', 'asfsp', 'asf', 'dp', 'dc']
 	def __init__ (self):
 		self.zonelist = basic.csv2list('metadata/partialzonelist.csv')
-		self.testlist = ['RM-4132', 'RM-2150', 'RM-2108']
 		self.actuNames = ActuatorNames()
 		self.sensorNames = SensorNames()
 		self.bdm = BDWrapper()
 		self.anal = Analyzer()
+		self.outputfile = 'result/dep_result.xlsx'
 
 	def arrange_data(self, rawData):
 		oc = rawData[self.actuNames.occupiedCommand]
@@ -55,24 +57,33 @@ class FindDep:
 		wcad = rawData[self.actuNames.warmCoolAdjust]
 		cc = rawData[self.actuNames.coolingCommand]
 		hc = rawData[self.actuNames.heatingCommand]
+		rvc = rawData[self.actuNames.reheatValveCommand]
 		cmf = rawData[self.actuNames.coolingMaxFlow]
-		#ohf = rawData[self.actuNames.occupiedHeatingFlow]
+		ohf = rawData[self.actuNames.occupiedHeatingFlow]
 		ocm = rawData[self.actuNames.occupiedCoolingMinimumFlow]
 		asfsp = rawData[self.actuNames.actualSupplyFlowSP]
+		asf = rawData[self.sensorNames.actualSupplyFlow]
+		dc = rawData[self.actuNames.damperCommand]
+		dp = rawData[self.sensorNames.damperPosition]
 		newcs = cs + wcad
 		acs_diff = acs - zt
 
 		output = dict()
-		output['oc'] = oc
 		output['cs'] = newcs
+		output['oc'] = oc
 		output['acs'] = acs
 		output['ahs'] = ahs
 		output['zt'] = zt
 		output['cc'] = cc
 		output['hc'] = hc
+		output['rvc'] = rvc
 		output['cmf'] = cmf
 		output['ocm'] = ocm
+		output['ohf'] = ohf
 		output['asfsp'] = asfsp
+		output['asf'] = asf
+		output['dp'] = dp
+		output['dc'] = dc
 
 		return output
 
@@ -95,7 +106,7 @@ class FindDep:
 		for tp, val in actuDiff.iterkv():
 			if val >actuThre:
 				entireChgCnt += 1
-				if True in (abs(targetDiff[tp-timedelta(minutes=5):tp+timedelta(minutes=2)])>targetThre).values:
+				if True in (abs(targetDiff[tp-timedelta(minutes=10):tp+timedelta(minutes=2)])>targetThre).values:
 					depCnt += 1
 		if entireChgCnt==0:
 			corrVal = None
@@ -110,7 +121,9 @@ class FindDep:
 		for tp, val in targetDiff.iterkv():
 			if val >targetThre:
 				entireChgCnt += 1
-				if True in (abs(actuDiff[tp-timedelta(minutes=2):tp+timedelta(minutes=5)])>actuThre).values:
+				threshold = np.std(actu[tp-timedelta(minutes=12):tp])
+#				if True in (abs(actuDiff[tp-timedelta(minutes=2):tp+timedelta(minutes=10)])>actuThre).values:
+				if True in (abs(actuDiff[tp-timedelta(minutes=2):tp+timedelta(minutes=10)])>threshold).values:
 					depCnt += 1
 		if entireChgCnt==0:
 			corrVal = None
@@ -129,6 +142,8 @@ class FindDep:
 		minDict = dict()
 		maxDict = dict()
 		corrDict = dict()
+		for key in self.allKeys:
+			corrDict[key] = (None,None)
 		
 		for actu, data in dataDict.iteritems():
 			minDict[actu] = min(data)
@@ -138,21 +153,33 @@ class FindDep:
 		keyList = dataDict.keys()
 		keyList.remove(targetActu)
 		for actu in keyList:
-			if actu=='acs':
-				pass
 			corrDict[actu] = self.calc_corr(dataDict[targetActu], dataDict[actu])
 		print repr(corrDict)
+		return corrDict
 
 	def dep_analysis(self):
-		filenameDict = dict()
+		filenameDict = OrderedDict()
 		filenameDict['cs'] = ('data/dep_cs_3142_1005.pkl')
+#		filenameDict['oc'] = ('data/dep_oc_3152_1005.pkl')
+		filenameDict['oc'] = ('data/dep_oc_2108_1008.pkl')
 		filenameDict['cc'] = ('data/dep_cc_3256_1005.pkl')
-		filenameDict['oc'] = ('data/dep_oc_3152_1005.pkl')
+		filenameDict['hc'] = ('data/dep_hc_2112_1008.pkl')
+		#filenameDict['hc'] = ('data/dep_hc_3252_1005.pkl')
 		filenameDict['asfsp'] = ('data/dep_asfsp_3144_1006.pkl')
-		filenameDict['hc'] = ('data/dep_hc_3252_1005.pkl')
+		filenameDict['dc'] = ('data/dep_dc_4220_1008.pkl')
+
+		descendOutputDF = pd.DataFrame(index=self.allKeys)
+		ascendOutputDF = pd.DataFrame(index=self.allKeys)
 
 		for actu, filename in filenameDict.iteritems():
-			if actu=='asfsp':
-				pass
+			print actu
 			print '=============', actu, '============='
-			self.find_lower_actuators(filename, actu)
+			corrDict = self.find_lower_actuators(filename, actu)
+			corrDF = pd.DataFrame.from_dict(corrDict,'index')
+			descendOutputDF[actu] = corrDF[0]
+			ascendOutputDF[actu] = corrDF[1]
+
+		excelWriter = pd.ExcelWriter(self.outputfile)
+		descendOutputDF.to_excel(excelWriter, 'Sheet1')
+		ascendOutputDF.to_excel(excelWriter, 'Sheet2')
+

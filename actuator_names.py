@@ -12,6 +12,7 @@ class ActuatorNames:
 	warmCoolAdjust = 'Warm Cool Adjust'
 	coolingMaxFlow = 'Cooling Max Flow'
 	occupiedHeatingFlow= 'Occupied Htg Flow'
+	reheatValveCommand = 'Reheat Valve Command'
 	nameList = None
 	
 	def __init__(self):
@@ -29,6 +30,7 @@ class ActuatorNames:
 		self.nameList.append(self.warmCoolAdjust)
 		self.nameList.append(self.coolingMaxFlow)
 		self.nameList.append(self.occupiedHeatingFlow)
+		self.nameList.append(self.reheatValveCommand)
 
 	def __contains__(self, given):
 		if given in self.nameList:
