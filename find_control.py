@@ -235,8 +235,41 @@ class FindControl:
 		return filtered
 
 	def fit_all_types(self):
+		print "=======================ASFSP STARTS (MIXED)==========================="
+		ccLearnFiles = list()
+		ccTestFiles = list()
+		ccAuxFiles = list()
+		ccAuxFiles.append('data/onemonth_3256_0901.pkl')
+		ccLearnFiles.append('data/reg_safsp_3256_1006.pkl')
+		ccTestFiles.append('data/oneyear_3256_0701.pkl')
+		self.fit_for_a_type(ccLearnFiles, ccTestFiles, 'asfsp',auxFileList=ccAuxFiles)
+		print "=======================ACS and AHS STARTS (w/o control)==========================="
+		acsahsLearnFiles = []
+		acsahsAuxFiles = None
+		acsahsTestFiles = []
+		acsahsLearnFiles.append('data\onemonth_3256_0901.pkl')
+
+		#acsahsLearnFiles.append('data\oneday_2146_1004.pkl')
+		acsahsTestFiles.append('data\oneyear_3256_0701.pkl')
+		#acsahsTestFiles.append('data\oneyear_2146_0101.pkl')
+		self.fit_for_a_type(acsahsLearnFiles, acsahsTestFiles, 'acs', auxFileList=acsahsAuxFiles)
+		self.fit_for_a_type(acsahsLearnFiles, acsahsTestFiles, 'ahs')
 		
-		print "=======================CC STARTS (w/o CONTROL)==========================="
+		print "=======================ACS and AHS STARTS (MIXED)==========================="
+		acsahsLearnFiles = []
+		acsahsAuxFiles = []
+		acsahsTestFiles = []
+		acsahsAuxFiles.append('data\onemonth_3256_0901.pkl')
+		acsahsLearnFiles.append('data\reg_cs_3256_1010.pkl')
+
+		#acsahsLearnFiles.append('data\oneday_2146_1004.pkl')
+		acsahsTestFiles.append('data\oneyear_3256_0701.pkl')
+		#acsahsTestFiles.append('data\oneyear_2146_0101.pkl')
+		self.fit_for_a_type(acsahsLearnFiles, acsahsTestFiles, 'acs', auxFileList=acsahsAuxFiles)
+		self.fit_for_a_type(acsahsLearnFiles, acsahsTestFiles, 'ahs')
+		
+		
+		print "=======================CC STARTS (MIXED)==========================="
 		ccLearnFiles = list()
 		ccTestFiles = list()
 		ccAuxFiles = list()
@@ -248,14 +281,6 @@ class FindControl:
 		self.fit_for_a_type(ccLearnFiles, ccTestFiles, 'cc', auxFileList=ccAuxFiles)
 		
 		
-		print "=======================ASFSP STARTS (MIXED)==========================="
-		ccLearnFiles = list()
-		ccTestFiles = list()
-		ccAuxFiles = list()
-		ccAuxFiles.append('data/onemonth_3256_0901.pkl')
-		ccLearnFiles.append('data/reg_safsp_3256_1006.pkl')
-		ccTestFiles.append('data/oneyear_3256_0701.pkl')
-		self.fit_for_a_type(ccLearnFiles, ccTestFiles, 'asfsp',auxFileList=ccAuxFiles)
 
 
 		print "=======================ASFSP STARTS (w/o CONTROL)==========================="
@@ -277,11 +302,11 @@ class FindControl:
 		print "=======================ACS and AHS STARTS (MIXED)==========================="
 		acsahsLearnFiles = []
 		acsahsAuxFiles = []
+		acsahsTestFiles = []
 		acsahsAuxFiles.append('data\onemonth_2142_0801.pkl')
 		acsahsLearnFiles.append('data\oneday_2142_1004.pkl')
 
 		#acsahsLearnFiles.append('data\oneday_2146_1004.pkl')
-		acsahsTestFiles = []
 		acsahsTestFiles.append('data\oneyear_2142_0101.pkl')
 		#acsahsTestFiles.append('data\oneyear_2146_0101.pkl')
 		self.fit_for_a_type(acsahsLearnFiles, acsahsTestFiles, 'acs', auxFileList=acsahsAuxFiles)
@@ -476,8 +501,10 @@ class FindControl:
 		else:
 			testDataDict=  self.merge_data(testDataList[0], testDataList[:-1])
 
-		data = dataDict[key].append(auxDataDict[key], ignore_index=True)
-#		data = dataDict[key]
+		if auxFileList != None:
+			data = dataDict[key].append(auxDataDict[key], ignore_index=True)
+		else:
+			data = dataDict[key]
 		
 		print '\n'
 		print key
