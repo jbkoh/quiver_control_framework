@@ -21,7 +21,7 @@ from sklearn.linear_model import LinearRegression
 from copy import deepcopy
 import scipy.fftpack as fftpack
 from statsmodels.nonparametric.smoothers_lowess import lowess
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 
 class FindDep:
@@ -133,6 +133,32 @@ class FindDep:
 
 		return (descendCorr, ascendCorr)
 
+	def calc_corr_cnt(self, controlledData, uncontrolledData):
+		controlledMin = min(controlledData)
+		controlledMax = max(controlledData)
+		controlledThre = (controlledMax-controlledMin)*0.1
+#		controlledThre = 0
+		uncontrolledMin = min(uncontrolledData)
+		uncontrolledMax = max(uncontrolledData)
+		uncontrolledThre = (uncontrolledMax-uncontrolledMin)*0.05
+#		uncontrolledThre = 0
+		controlledDiff = controlledData.diff().fillna(0)
+		uncontrolledDiff = uncontrolledData.diff().fillna(0)
+		depCnt = 0
+		entireChgCnt = 0
+		
+		descendCorr = 0 # P(B|A) when A->B
+		depCnt = 0
+		entireChgCnt = 0
+		for tp, val in controlledDiff.iterkv():
+			if val >controlledThre:
+				entireChgCnt += 1
+				threshold = np.std(uncontrolledData[tp-timedelta(minutes=12):tp])
+#				if True in (abs(uncontrolledDiff[tp-timedelta(minutes=2):tp+timedelta(minutes=10)])>uncontrolledThre).values:
+				if True in (abs(uncontrolledDiff[tp-timedelta(minutes=7):tp+timedelta(minutes=10)])>threshold).values:
+					depCnt += 1
+		return (entireChgCnt, depCnt)
+
 	def find_lower_actuators(self, filename, targetActu):
 		with open(filename, 'rb') as fp:
 			dataDict = self.arrange_data(pickle.load(fp))
@@ -158,24 +184,105 @@ class FindDep:
 		print repr(corrDict)
 		return corrDict
 
+	def calc_dep(self, filelist, controlledKey):
+		controlledChangeDict = defaultdict(int)
+		depChangeDict = defaultdict(int)
+		keylist = deepcopy(self.allKeys)
+		keylist.remove(controlledKey)
+		for filename in filelist:
+			print filename
+			with open(filename, 'rb') as fp:
+				dataDict = self.arrange_data(pickle.load(fp))
+			controledData = dataDict[controlledKey]
+			del dataDict[controlledKey]
+			for key in keylist:
+				print key
+				(contCnt, uncontCnt) = self.calc_corr_cnt(controledData, dataDict[key])
+				controlledChangeDict[key] += contCnt
+				depChangeDict[key] += uncontCnt
+		probDict = dict()
+		for key in self.allKeys:
+			try:
+				probDict[key] = controlledChangedDict[key]/depChangeDict[key]
+			except:
+				probDict[key] = None
+		return probDict
+
 	def dep_analysis_all(self):
 		zonelist = ['RM-2108', 'RM-2112', 'RM-2118', 'RM-2226', 'RM-2230']
-		filedictlist = defaultdict(list)
-		filedictlist['RM-2108'].append('data/dep_all_2108_1016.pkl')
-		filedictlist['RM-2108'].append('data/dep_all_2108_1017.pkl')
-		
-		filedictlist['RM-2118'].append('data/dep_all_2118_1016.pkl')
-		filedictlist['RM-2118'].append('data/dep_all_2118_1017.pkl')
+		filedictdictlist = dict()
+		filedictdictlist['RM-2108'] = defaultdict(list)
+		filedictdictlist['RM-2108']['cs'].append('data/dep/dep_cs_2108_1015.pkl')
+		filedictdictlist['RM-2108']['cs'].append('data/dep/dep_cs_2108_1016.pkl')
+		filedictdictlist['RM-2108']['cs'].append('data/dep/dep_cs_2108_1017.pkl')
+		filedictdictlist['RM-2108']['oc'].append('data/dep/dep_oc_2108_1015.pkl')
+		filedictdictlist['RM-2108']['oc'].append('data/dep/dep_oc_2108_1016.pkl')
+		filedictdictlist['RM-2108']['oc'].append('data/dep/dep_oc_2108_1017.pkl')
+		filedictdictlist['RM-2108']['cc'].append('data/dep/dep_cc_2108_1015.pkl')
+		filedictdictlist['RM-2108']['cc'].append('data/dep/dep_cc_2108_1016.pkl')
+		filedictdictlist['RM-2108']['oc'].append('data/dep/dep_cc_2108_1017.pkl')
+		filedictdictlist['RM-2108']['hc'].append('data/dep/dep_hc_2108_1015.pkl')
 
-		filedictlist['RM-2230'].append('data/dep_all_2230_1012.pkl')
-		filedictlist['RM-2230'].append('data/dep_all_2230_1017.pkl')
-		
-		filedictlist['RM-2226'].append('data/dep_all_2226_1016.pkl')
-		filedictlist['RM-2226'].append('data/dep_all_2226_1017.pkl')
-		
-		filedictlist['RM-2112'].append('data/dep_all_2226_1016.pkl')
-		filedictlist['RM-2112'].append('data/dep_all_2226_1017.pkl')
+		filedictdictlist['RM-2112'] = defaultdict(list)
+		filedictdictlist['RM-2112']['cs'].append('data/dep/dep_cs_2112_1015.pkl')
+		filedictdictlist['RM-2112']['cs'].append('data/dep/dep_cs_2112_1016.pkl')
+		filedictdictlist['RM-2112']['cs'].append('data/dep/dep_cs_2112_1017.pkl')
+		filedictdictlist['RM-2112']['oc'].append('data/dep/dep_oc_2112_1015.pkl')
+		filedictdictlist['RM-2112']['oc'].append('data/dep/dep_oc_2112_1016.pkl')
+		filedictdictlist['RM-2112']['oc'].append('data/dep/dep_oc_2112_1017.pkl')
+		filedictdictlist['RM-2112']['cc'].append('data/dep/dep_cc_2112_1015.pkl')
+		filedictdictlist['RM-2112']['cc'].append('data/dep/dep_cc_2112_1016.pkl')
+		filedictdictlist['RM-2112']['oc'].append('data/dep/dep_cc_2112_1017.pkl')
+		filedictdictlist['RM-2112']['hc'].append('data/dep/dep_hc_2112_1015.pkl')
 
+		filedictdictlist['RM-2118'] = defaultdict(list)
+		filedictdictlist['RM-2118']['cs'].append('data/dep/dep_cs_2118_1015.pkl')
+		filedictdictlist['RM-2118']['cs'].append('data/dep/dep_cs_2118_1016.pkl')
+		filedictdictlist['RM-2118']['cs'].append('data/dep/dep_cs_2118_1017.pkl')
+		filedictdictlist['RM-2118']['oc'].append('data/dep/dep_oc_2118_1015.pkl')
+		filedictdictlist['RM-2118']['oc'].append('data/dep/dep_oc_2118_1016.pkl')
+		filedictdictlist['RM-2118']['oc'].append('data/dep/dep_oc_2118_1017.pkl')
+		filedictdictlist['RM-2118']['cc'].append('data/dep/dep_cc_2118_1015.pkl')
+		filedictdictlist['RM-2118']['cc'].append('data/dep/dep_cc_2118_1016.pkl')
+		filedictdictlist['RM-2118']['oc'].append('data/dep/dep_cc_2118_1017.pkl')
+		filedictdictlist['RM-2118']['hc'].append('data/dep/dep_hc_2118_1015.pkl')
+
+		filedictdictlist['RM-2226'] = defaultdict(list)
+		filedictdictlist['RM-2226']['cs'].append('data/dep/dep_cs_2226_1012.pkl')
+		filedictdictlist['RM-2226']['oc'].append('data/dep/dep_oc_2226_1012.pkl')
+		filedictdictlist['RM-2226']['cc'].append('data/dep/dep_cc_2226_1012.pkl')
+		filedictdictlist['RM-2226']['cc'].append('data/dep/dep_cc_2226_1014.pkl')
+		filedictdictlist['RM-2226']['hc'].append('data/dep/dep_hc_2226_1012.pkl')
+		filedictdictlist['RM-2226']['hc'].append('data/dep/dep_hc_2226_1013.pkl')
+		filedictdictlist['RM-2226']['asfsp'].append('data/dep/dep_asfsp_2226_1012.pkl')
+		filedictdictlist['RM-2226']['asfsp'].append('data/dep/dep_asfsp_2226_1013.pkl')
+		filedictdictlist['RM-2226']['dc'].append('data/dep/dep_dc_2226_1012.pkl')
+		filedictdictlist['RM-2226']['dc'].append('data/dep/dep_dc_2226_1013.pkl')
+
+		filedictdictlist['RM-2230'] = defaultdict(list)
+		filedictdictlist['RM-2230']['cs'].append('data/dep/dep_cs_2230_1012.pkl')
+		filedictdictlist['RM-2230']['oc'].append('data/dep/dep_oc_2230_1012.pkl')
+		filedictdictlist['RM-2230']['cc'].append('data/dep/dep_cc_2230_1012.pkl')
+		filedictdictlist['RM-2230']['cc'].append('data/dep/dep_cc_2230_1014.pkl')
+		filedictdictlist['RM-2230']['hc'].append('data/dep/dep_hc_2230_1012.pkl')
+		filedictdictlist['RM-2230']['hc'].append('data/dep/dep_hc_2230_1013.pkl')
+		filedictdictlist['RM-2230']['asfsp'].append('data/dep/dep_asfsp_2230_1012.pkl')
+		filedictdictlist['RM-2230']['asfsp'].append('data/dep/dep_asfsp_2230_1013.pkl')
+		filedictdictlist['RM-2230']['dc'].append('data/dep/dep_dc_2230_1012.pkl')
+		filedictdictlist['RM-2230']['dc'].append('data/dep/dep_dc_2230_1013.pkl')
+
+		probDict = dict()
+		for zone, filedictlist in filedictdictlist.iteritems():
+			print zone
+			probDict[zone] = self.dep_analysis_rep(zone, filedictlist)
+
+	def dep_analysis_rep(self, zone, filedictlist):
+		probDict = dict()
+		for key, filelist in filedictlist.iteritems():
+			print "========================================master key: ", key
+			probDict[key] = self.calc_dep(filelist, key)
+		print probDict
+		return probDict
 
 	def dep_analysis(self, zone=None, filedictlist=None):
 		filenameDict = OrderedDict()
