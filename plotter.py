@@ -187,7 +187,7 @@ def plot_colormap(data, figSizeIn, xlabel, ylabel, cbarlabel, cmapIn, ytickRange
 	plt.show()
 	return fig
 
-def plot_colormap_upgrade2(data, xlabel=None, ylabel=None, cbarLabel=None, cmapIn=None, ytickRange=None, ytickTags=None, xtickRange=None, xtickTags=None, title=None, xmin=None, xmax=None, xgran=None, ymin=None, ymax=None, figSizeIn=None, ygran=None, fig=None, ax=None):
+def plot_colormap_upgrade2(data, xlabel=None, ylabel=None, cbarLabel=None, cmapIn=None, ytickRange=None, ytickTags=None, xtickRange=None, xtickTags=None, title=None, xmin=None, xmax=None, xgran=None, ymin=None, ymax=None, figSizeIn=None, ygran=None, fig=None, ax=None, cbarTicks=None, cbartickLabels=None, xtickRotate=0):
 	if fig==None:
 		fig, ax = plt.subplots(1,1)
 	if xmin != None:
@@ -200,8 +200,12 @@ def plot_colormap_upgrade2(data, xlabel=None, ylabel=None, cbarLabel=None, cmapI
 	else:
 		p = ax.pcolormesh(data, cmap=cmapIn)
 
-	cbar = fig.colorbar(p)
-	cbar.set_label(cbarLabel, labelpad=-0.1)
+	if cbarTicks!=None:
+		cbar = fig.colorbar(p, ticks=cbarTicks)
+		cbar.ax.set_yticklabels(cbartickLabels)
+	else:
+		cbar = fig.colorbar(p)
+	cbar.set_label(cbarLabel, labelpad=1)
 	if xlabel!=None:
 		ax.set_xlabel(xlabel)
 
@@ -209,7 +213,7 @@ def plot_colormap_upgrade2(data, xlabel=None, ylabel=None, cbarLabel=None, cmapI
 		ax.set_ylabel(ylabel)
 	if xtickTags!=None and xtickRange!=None:
 		ax.set_xticks(xtickRange)
-		ax.set_xticklabels(xtickTags, fontsize=9, horizontalalignment='left')
+		ax.set_xticklabels(xtickTags, fontsize=9, horizontalalignment='left', rotation=xtickRotate)
 		#ax.tick_params(left='on', right='on')
 #		for label in ax.xaxis.get_majorticklabels():
 #			label.set_position((1,1))

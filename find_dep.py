@@ -22,6 +22,7 @@ from copy import deepcopy
 import scipy.fftpack as fftpack
 from statsmodels.nonparametric.smoothers_lowess import lowess
 from collections import OrderedDict, defaultdict
+import pprint
 
 
 class FindDep:
@@ -147,13 +148,12 @@ class FindDep:
 		depCnt = 0
 		entireChgCnt = 0
 		
-		descendCorr = 0 # P(B|A) when A->B
 		depCnt = 0
 		entireChgCnt = 0
 		for tp, val in controlledDiff.iterkv():
-			if val >controlledThre:
+			if abs(val) >controlledThre:
 				entireChgCnt += 1
-				threshold = np.std(uncontrolledData[tp-timedelta(minutes=12):tp])
+				threshold = np.std(uncontrolledData[tp-timedelta(minutes=12):tp])*2
 #				if True in (abs(uncontrolledDiff[tp-timedelta(minutes=2):tp+timedelta(minutes=10)])>uncontrolledThre).values:
 				if True in (abs(uncontrolledDiff[tp-timedelta(minutes=7):tp+timedelta(minutes=10)])>threshold).values:
 					depCnt += 1
@@ -185,8 +185,8 @@ class FindDep:
 		return corrDict
 
 	def calc_dep(self, filelist, controlledKey):
-		controlledChangeDict = defaultdict(int)
-		depChangeDict = defaultdict(int)
+		controlledChangeDict = defaultdict(float)
+		depChangeDict = defaultdict(float)
 		keylist = deepcopy(self.allKeys)
 		keylist.remove(controlledKey)
 		for filename in filelist:
@@ -203,9 +203,9 @@ class FindDep:
 		probDict = dict()
 		for key in self.allKeys:
 			try:
-				probDict[key] = controlledChangedDict[key]/depChangeDict[key]
+				probDict[key] = depChangeDict[key]/controlledChangeDict[key]
 			except:
-				probDict[key] = None
+				probDict[key] = 0
 		return probDict
 
 	def dep_analysis_all(self):
@@ -272,16 +272,22 @@ class FindDep:
 		filedictdictlist['RM-2230']['dc'].append('data/dep/dep_dc_2230_1013.pkl')
 
 		probDict = dict()
+		pprinter = pprint.PrettyPrinter(indent=4)
+		excelWriter = pd.ExcelWriter(self.outputfile)
 		for zone, filedictlist in filedictdictlist.iteritems():
 			print zone
-			probDict[zone] = self.dep_analysis_rep(zone, filedictlist)
+			zoneProb = self.dep_analysis_rep(zone, filedictlist)
+			probDict[zone] = zoneProb
+			probDF = pd.DataFrame.from_dict(zoneProb,'columns').transpose()
+			pprinter.pprint(zoneProb)
+			probDF.to_excel(excelWriter, 'Sheet_'+zone.replace('RM-',''))
+		pprinter.pprint(probDict)
 
 	def dep_analysis_rep(self, zone, filedictlist):
 		probDict = dict()
 		for key, filelist in filedictlist.iteritems():
 			print "========================================master key: ", key
 			probDict[key] = self.calc_dep(filelist, key)
-		print probDict
 		return probDict
 
 	def dep_analysis(self, zone=None, filedictlist=None):
