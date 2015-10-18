@@ -114,7 +114,6 @@ class FindDep:
 			corrVal = float(depCnt) / float(entireChgCnt)
 		ascendCorr = corrVal
 		
-		
 		descendCorr = 0 # P(B|A) when A->B
 		depCnt = 0
 		entireChgCnt = 0
@@ -123,7 +122,7 @@ class FindDep:
 				entireChgCnt += 1
 				threshold = np.std(actu[tp-timedelta(minutes=12):tp])
 #				if True in (abs(actuDiff[tp-timedelta(minutes=2):tp+timedelta(minutes=10)])>actuThre).values:
-				if True in (abs(actuDiff[tp-timedelta(minutes=2):tp+timedelta(minutes=10)])>threshold).values:
+				if True in (abs(actuDiff[tp-timedelta(minutes=7):tp+timedelta(minutes=10)])>threshold).values:
 					depCnt += 1
 		if entireChgCnt==0:
 			corrVal = None
@@ -153,19 +152,39 @@ class FindDep:
 		keyList = dataDict.keys()
 		keyList.remove(targetActu)
 		for actu in keyList:
+			if actu=='hc':
+				pass
 			corrDict[actu] = self.calc_corr(dataDict[targetActu], dataDict[actu])
 		print repr(corrDict)
 		return corrDict
 
-	def dep_analysis(self):
+	def dep_analysis_all(self):
+		zonelist = ['RM-2108', 'RM-2112', 'RM-2118', 'RM-2226', 'RM-2230']
+		filedictlist = defaultdict(list)
+		filedictlist['RM-2108'].append('data/dep_all_2108_1016.pkl')
+		filedictlist['RM-2108'].append('data/dep_all_2108_1017.pkl')
+		
+		filedictlist['RM-2118'].append('data/dep_all_2118_1016.pkl')
+		filedictlist['RM-2118'].append('data/dep_all_2118_1017.pkl')
+
+		filedictlist['RM-2230'].append('data/dep_all_2230_1012.pkl')
+		filedictlist['RM-2230'].append('data/dep_all_2230_1017.pkl')
+		
+		filedictlist['RM-2226'].append('data/dep_all_2226_1016.pkl')
+		filedictlist['RM-2226'].append('data/dep_all_2226_1017.pkl')
+		
+		filedictlist['RM-2112'].append('data/dep_all_2226_1016.pkl')
+		filedictlist['RM-2112'].append('data/dep_all_2226_1017.pkl')
+
+
+	def dep_analysis(self, zone=None, filedictlist=None):
 		filenameDict = OrderedDict()
-		filenameDict['cs'] = ('data/dep_cs_3142_1005.pkl')
-#		filenameDict['oc'] = ('data/dep_oc_3152_1005.pkl')
-		filenameDict['oc'] = ('data/dep_oc_2108_1008.pkl')
+		
+		filenameDict['cs'] = ('data/dep_all_2226_1012.pkl')
+		filenameDict['oc'] = ('data/dep_all_2226_1012.pkl')
 		filenameDict['cc'] = ('data/dep_cc_3256_1005.pkl')
-		filenameDict['hc'] = ('data/dep_hc_2112_1008.pkl')
-		#filenameDict['hc'] = ('data/dep_hc_3252_1005.pkl')
-		filenameDict['asfsp'] = ('data/dep_asfsp_3144_1006.pkl')
+		filenameDict['hc'] = ('data/dep_hc_2208_1012.pkl')
+		filenameDict['asfsp'] = ('data/dep_all_2226_1012.pkl')
 		filenameDict['dc'] = ('data/dep_dc_4220_1008.pkl')
 
 		descendOutputDF = pd.DataFrame(index=self.allKeys)

@@ -26,7 +26,6 @@ anal.store_zone_sensors('RM-3256', datetime(2015,9,1),datetime(2015,9,30),'nextv
 
 
 #10/06
-anal.store_zone_sensors('RM-3142', datetime(2015,10,5,20,30), datetime(2015,10,6,5,00), 'nextval', 'data/dep_cs_3142_1005.pkl')
 #anal.store_zone_sensors('RM-3148', datetime(2015,10,5,20,30), datetime(2015,10,6,5,00), 'nextval', 'data/dep_cs_3148_1005.pkl')
 #anal.store_zone_sensors('RM-3142', datetime(2015,10,6,5,45), datetime(2015,10,6,9,15), 'nextval', 'data/dep_cs_3142_1005_2.pkl')
 anal.store_zone_sensors('RM-3142', datetime(2015,10,5,20,30), datetime(2015,10,6,9,15), 'nextval', 'data/dep_cs_3142_1005.pkl')
@@ -77,7 +76,46 @@ anal.store_zone_sensors('RM-4220', datetime(2015,10,9,19,20), datetime(2015,10,1
 anal.store_zone_sensors('RM-3221', datetime(2015,10,10,23,12),datetime(2015,10,11,4,30), 'nextval', 'data/revdep_asfsp_3221_1010.pkl')
 anal.store_zone_sensors('RM-3122', datetime(2015,10,10,23,12),datetime(2015,10,11,4,30), 'nextval', 'data/revdep_dc_3122_1010.pkl')
 anal.receive_entire_sensors(datetime(2015,10,10,20,40), datetime(2015,10,11,8,40), 'data/col_cs_2112_1010.pkl', 'nextval')
-anal.receive_entire_sensors(datetime(2015,10,10,21), datetime(2015,10,11,2,20), 'data/col_os_4208_1010.pkl', 'nextval')
+anal.receive_entire_sensors(datetime(2015,10,10,21), datetime(2015,10,11,2,20), 'data/col_oc_4208_1010.pkl', 'nextval')
 anal.store_zone_sensors('RM-3256', datetime(2015,10,10,18,10),datetime(2015,10,11,8,30), 'nextval', 'data/reg_cs_3256_1010.pkl')
 anal.store_zone_sensors('RM-4144', datetime(2015,10,10,23,50),datetime(2015,10,11,8,50), 'nextval', 'data/reg_cs_4144_1010.pkl')
 anal.store_zone_sensors('RM-4148', datetime(2015,10,10,23,50),datetime(2015,10,11,8,50), 'nextval', 'data/reg_cs_4148_1010.pkl')
+
+#10/12
+anal.receive_entire_sensors(datetime(2015,10,11,22,40), datetime(2015,10,12,6), 'data/col_cs_1150_1011.pkl', 'nextval')
+anal.receive_entire_sensors(datetime(2015,10,11,22,40), datetime(2015,10,12,9), 'data/col_cs_1150_1011_extended.pkl', 'nextval')
+
+#10/13
+anal.receive_entire_sensors(datetime(2015,10,12,21,10), datetime(2015,10,13,5,50), 'data/col_cs_4132_1012.pkl', 'nextval')
+anal.store_zone_sensors('RM-2226', datetime(2015,10,12,22,30),datetime(2015,10,13,2,50), 'nextval', 'data/dep_all_2226_1012.pkl')
+anal.store_zone_sensors('RM-2230', datetime(2015,10,12,22,30),datetime(2015,10,13,2,50), 'nextval', 'data/dep_all_2230_1012.pkl')
+anal.store_zone_sensors('RM-2262', datetime(2015,10,13,0,40),datetime(2015,10,13,3,50), 'nextval', 'data/revdep_rvc_2262_1012.pkl')
+anal.store_zone_sensors('RM-2218', datetime(2015,10,13,0,40),datetime(2015,10,13,3,50), 'nextval', 'data/revdep_rvc_2218_1012.pkl')
+anal.store_zone_sensors('RM-2208', datetime(2015,10,12,21, 30),datetime(2015,10,12,23,50), 'nextval', 'data/dep_hc_2208_1012.pkl')
+
+# 10/14
+anal.store_zone_sensors('RM-2226', datetime(2015,10,14,21, 30),datetime(2015,10,12,23,50), 'nextval', 'data/dep_hc_2208_1012.pkl')
+
+# 10/15
+anal.receive_entire_sensors(datetime(2015,10,14,12), datetime(2015,10,14,18), 'data/col_cs_4132_1014.pkl', 'nextval')
+
+# 10/16
+anal.store_zone_sensors('RM-2112', datetime(2015,10,16,0),datetime(2015,10,16,7,10), 'nextval', 'data/dep_all_2112_1016.pkl')
+anal.store_zone_sensors('RM-2108', datetime(2015,10,16,0),datetime(2015,10,16,7,10), 'nextval', 'data/dep_all_2108_1016.pkl')
+anal.store_zone_sensors('RM-2118', datetime(2015,10,16,0),datetime(2015,10,16,7,10), 'nextval', 'data/dep_all_2118_1016.pkl')
+
+# 10/17
+zonelist = ['RM-1108', 'RM-1109', 'RM-1124', 'RM-2130', 'RM-2121', 'RM-3102', 'RM-3106', 'RM-3110', 'RM-3130', 'RM-4114', 'RM-4220']
+for zone in zonelist:
+	anal.store_zone_sensors(zone, datetime(2015,10,16,21),datetime(2015,10,16,23,45), 'nextval', 'data/type_lowcs_'+zone.replace('RM-','')+'_1016.pkl')
+	anal.store_zone_sensors(zone, datetime(2015,10,17,0),datetime(2015,10,17,2,45), 'nextval', 'data/type_highcs_'+zone.replace('RM-','')+'_1016.pkl')
+	anal.store_zone_sensors(zone, datetime(2014,6,1), datetime(2015,6,1), 'nextval', 'data/oneyear_'+zone.replace('RM-','')+'_0601.pkl')
+
+zonelist = ['RM-1108', 'RM-1109', 'RM-1124', 'RM-2130', 'RM-2121', 'RM-3102', 'RM-3106', 'RM-3110', 'RM-3130', 'RM-4114', 'RM-4220']
+for zone in zonelist:
+	anal.store_zone_sensors(zone, datetime(2015,10,17,14,50),datetime(2015,10,17,17,20), 'nextval', 'data/type_lowcs_'+zone.replace('RM-','')+'_1017.pkl')
+
+
+zonelist = ['RM-2108', 'RM-2112', 'RM-2118', 'RM-2226', 'RM-2230']
+for zone in zonelist:
+	anal.store_zone_sensors(zone, datetime(2015,10,16,20,30),datetime(2015,10,17,5), 'nextval', 'data/dep_all_'+zone.replace('RM-','')+'_1017.pkl')

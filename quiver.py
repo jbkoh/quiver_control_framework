@@ -70,8 +70,10 @@ class Quiver:
 	statusExpiration = timedelta(hours=24)
 	zonelist = None
 	logger = None
+	ztTrackZoneList = None
 
 	def __init__(self):
+		self.ztTrackZoneList = list()
 		self.ntpClient = ntplib.NTPClient()
 		self.statColl = CollectionWrapper('status')
 		self.expLogColl = CollectionWrapper('experiment_log')
@@ -569,6 +571,14 @@ class Quiver:
 	
 	def output_exp_log(self):
 		self.expLogColl.to_csv()
+	
+	def add_zone_zt_tacking(self,zone):
+		self.ztTrackZoneList.append(zone)
+	def remove_zone_zt_tacking(self,zone):
+		try:
+			self.ztTrackZoneList.remove(zone)
+		except QRError as e:
+			raise QRError('Failed to remove zone from ztTrackZonelist: ', zone)
 
 
 #		except Exception, e:

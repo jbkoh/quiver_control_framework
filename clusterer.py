@@ -12,7 +12,7 @@ class Clusterer():
 	datadir = 'data/'
 
 	def __init__ (self):
-		self.zonelist = self.csv2list('metadata/partialzonelist.csv')
+		self.zonelist = self.csv2list('metadata/zonelist.csv')
 
 	def csv2list(self, filename):
 		outputList = list()
@@ -30,25 +30,25 @@ class Clusterer():
 		pp = pprint.PrettyPrinter(indent=4)
 		pp.pprint(featDict)
 		print labels
-		print labels[featDict.keys().index('RM-4132')]
+		print labels[featDict.keys().index('RM-2122')]
 
 		#fig, axis = plt.subplots(1,1)
 		x = list()
 		y = list()
 		z = list()
 		for zone, val in featDict.iteritems():
-			if zone=='RM-4132':
+			if zone=='RM-2122':
 				continue
 			x.append(val[0])
 			y.append(val[1])
 			z.append(val[2])
 		#axis.scatter(x,y)
-		#axis.scatter(featDict['RM-4132'][0],featDict['RM-4132'][1],color='r')
+		#axis.scatter(featDict['RM-2122'][0],featDict['RM-2122'][1],color='r')
 
 		fig = plt.figure()
 		ax = fig.add_subplot(111,projection='3d')
 		ax.scatter(x,y,z)
-		ax.scatter(featDict['RM-4132'][0], featDict['RM-4132'][1], featDict['RM-4132'][2], color='r')
+		ax.scatter(featDict['RM-2122'][0], featDict['RM-2122'][1], featDict['RM-2122'][2], color='r')
 		ax.set_xlabel('fft')
 		ax.set_ylabel('minmax')
 		ax.set_zlabel('dtw')

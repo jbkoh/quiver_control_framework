@@ -121,8 +121,9 @@ class FindControl:
 			tempocc = zoneData[self.actuNames.tempOccSts]
 			#newoc = np.logical_or((oc-1)/2, tempocc)
 			newoc = oc
-			newoc[tempocc==1] = 3
+			newoc[(tempocc==1).tolist()] = 3
 		except:
+			newoc = oc
 			pass
 		wcad = zoneData[self.actuNames.warmCoolAdjust]
 		cc = zoneData[self.actuNames.coolingCommand]
@@ -132,6 +133,9 @@ class FindControl:
 		ocm = zoneData[self.actuNames.occupiedCoolingMinimumFlow]
 		const = pd.Series(data=np.ones(len(oc)), index=oc.index)
 		asfsp = zoneData[self.actuNames.actualSupplyFlowSP]
+		asf = zoneData[self.sensorNames.actualSupplyFlow]
+		dc = zoneData[self.actuNames.damperCommand]
+		#dp = zoneData[self.sensorNames.damperPosition]
 		zt_lag1 = self.shift_fill(zt,3)
 		zt_lag2 = self.shift_fill(zt,6)
 		zt_lag3 = self.shift_fill(zt,9)
@@ -151,10 +155,11 @@ class FindControl:
 		maxcc[:]=100
 		newcs = cs + wcad
 		acs_diff = acs - zt
+		ahs_diff = zt - ahs
 		acs_diff_diff = acs_diff.diff().fillna(method='bfill')
-		acs_diff_lag1 = self.shift_fill(acs_diff,1)
-		acs_diff_lag2 = self.shift_fill(acs_diff,2)
-		acs_diff_lag3 = self.shift_fill(acs_diff,3)
+		acs_diff_lag1 = self.shift_fill(acs_diff,3)
+		acs_diff_lag2 = self.shift_fill(acs_diff,6)
+		acs_diff_lag3 = self.shift_fill(acs_diff,9)
 		acs_diff_lag4 = self.shift_fill(acs_diff,4)
 		acs_diff_lag5 = self.shift_fill(acs_diff,5)
 		acs_diff_lag6 = self.shift_fill(acs_diff,6)
@@ -166,52 +171,136 @@ class FindControl:
 
 
 		#ccDF = pd.DataFrame({'cc':cc, 'zt':zt, 'acs':acs, 'maxcc':maxcc, 'mincc':mincc})
-		ccDF = pd.DataFrame({'cc':cc, 'zt':zt, 'acs':acs, 'zt_lag1':zt_lag1, 'zt_lag2':zt_lag2, 'zt_lag3':zt_lag3,'acs_lag1':acs_lag1,'acs_lag2':acs_lag2, 'acs_lag3':acs_lag3, 'maxcc':maxcc, 'mincc':mincc, 'acsdiff':acs_diff, 'zt_lag4':zt_lag4, 'zt_lag5':zt_lag5, 'acs_lag4':acs_lag4, 'acs_lag5':acs_lag5})
+		ccDF = pd.DataFrame({'cc':cc, 'zt':zt, 'acs':acs, 'zt_lag1':zt_lag1, 'zt_lag2':zt_lag2, 'zt_lag3':zt_lag3,'acs_lag1':acs_lag1,'acs_lag2':acs_lag2, 'acs_lag3':acs_lag3, 'maxcc':maxcc, 'mincc':mincc, 'acsdiff':acs_diff, 'zt_lag4':zt_lag4, 'zt_lag5':zt_lag5, 'acs_lag4':acs_lag4, 'acs_lag5':acs_lag5, 'oc':newoc, 'acs_diff_lag1':acs_diff_lag1, 'acs_diff_lag2':acs_diff_lag2, 'acs_diff_lag3':acs_diff_lag3})
 		#ccDF = pd.DataFrame({'cc':cc, 'zt':zt, 'acs':acs, 'acs_diff':acs_diff, 'acs_diff_diff':acs_diff_diff, 'acs_diff_lag1':acs_diff_lag1, 'acs_diff_lag2':acs_diff_lag2, 'acs_diff_lag3':acs_diff_lag3, 'acs_diff_lag4':acs_diff_lag4, 'acs_diff_lag5':acs_diff_lag5, 'acs_i':acs_i, 'zt_i':zt_i, })
-		#hcDF = pd.DataFrame({'hc':zoneData[self.actuNames.heatingCommand], 'zt':zoneData[self.sensorNames.zoneTemperature], 'ahs':zoneData[self.actuNames.actualHeatingSetpoint]})
+		hcDF = pd.DataFrame({'hc':hc, 'zt':zt, 'ahs':ahs, 'oc':newoc, 'ahs_diff':ahs_diff})
 		asfspDF = pd.DataFrame({'asfsp':asfsp, 'cc':cc, 'oc':newoc, 'hc':hc, 'ocm':ocm, 'cmf':cmf})
 		#asfspDF = pd.DataFrame({'asfsp':asfsp, 'cc':cc, 'hc':hc, 'ocm':ocm, 'cmf':cmf})
-		#dcDF = pd.DataFrame({'dc':zoneData[self.actuNames.damperCommand], 'asf':zoneData[self.sensorNames.actualSupplyFlow], 'asfsp':zoneData[self.actuNames.actualSupplyFlowSP]})
+		dcDF = pd.DataFrame({'dc':dc, 'asf':asf, 'asfsp':asfsp})
 		output = dict()
 		output['acs'] = acsDF
 		output['ahs'] = ahsDF
 		output['cc'] = ccDF
-		#output['hc'] = hcDF
+		output['hc'] = hcDF
 		output['asfsp'] = asfspDF
-		#output['dc'] = dcDF
+		output['dc'] = dcDF
 		return output
 
-	def download_control_data(self):
-		reqList = list()
-		reqList.append(('RM-4132', datetime(2015,9,29,12,01), datetime(2015,9,30,2,59)))
-		reqList.append(('RM-2108', datetime(2015,9,29,12,01), datetime(2015,9,30,2,59)))
-		acsDF = pd.DataFrame({'acs':[],'cs':[],'oc':[]})
-		for req in reqList:
-			zoneDict = dict()
-			for sensorType in self.actuNames.nameList+self.sensorNames.nameList:
-				uuid = self.bdm.get_sensor_uuids({'room':req[0], 'template':sensorType})[0]
-				rawData = self.bdm.get_sensor_ts(uuid, 'PresentValue', req[1], req[2])
-				zoneDict[sensorType] = rawData
-			
-			# Actual Cooling Setpoint Data Allignment
-			acsSeries = zoneDict[self.actuNames.actualCoolingSetpoint]
-			csSeries = zoneDict[self.actuNames.commonSetpoint]
-			ocSeries = zoneDict[self.actuNames.occupiedCommand]
-
-			csList = csSeries.tolist()
-			acsList = self.data_allign(csSeries, acsSeries, 'right')
-			ocList = self.data_allign(csSeries, ocSeries, 'left')
-			if not (len(csList)==len(acsList) and len(csList)==len(ocList)):
-				print "allignment is wrong"
+	def conditional_filter(self, dataDict, targetType, conditionList):
+		filtered = dataDict
+		for (key, val, condType) in conditionList:
+			if condType=='equal':
+				filtered = filtered[np.logical_and(filtered[key]<=val+val*0.01, filtered[key]>=val-val*0.01)]
+			elif condType=='less':
+				filtered = filtered[filtered[key]<=val]
+			else:
+				print "wrong conditional type"
 				return None
-			newDF = pd.DataFrame({'acs':acsList, 'cs':csList, 'oc':ocList})
-			acsDF = pd.concat([acsDF, newDF])
+		
+		return filtered
+
+		#for data in filtered.drop(key=targetType, axis=1):
+		#	plt.scatter(filtered[targetType], data)
+		#	plt.show()
+
+	def filelist_to_dict(self, filenameList):
+		dataList = list()
+		for idx, filename in enumerate(filenameList):
+			with open(filename,'rb') as fp:
+				rawDataDict = pickle.load(fp)
+				arrangedData = self.arrange_data(rawDataDict)
+				dataList.append(arrangedData)
+		if len(dataList)==1:
+			dataDict = dataList[0]
+		else:
+			dataDict = self.merge_data(dataList[0], dataList[:-1])
+		return dataDict
+
+	def simple_relationship(self, filenameList, key, conditionList):
+		dataDict = self.filelist_to_dict(filenameList)
+		data = dataDict[key]
+		filtered = self.conditional_filter(data, key, conditionList)
+		for pointType, data in filtered.drop(key, axis=1).iterkv():
+			plt.scatter(data, filtered[key])
+			plt.title(pointType)
+			plt.show()
+
+
+	def top_part_reg(self):
+		testFileList = ['data/testmonth_2236_0701.pkl']
+		print "One day----------------------------"
+		fileList = ['data/oneday_2236_0804.pkl']
+		self.partial_regression(fileList, 'asfsp', [('oc',3,'equal'), ('hc',10,'less')], testFileList)
+		print "One month----------------------------"
+		fileList = ['data/onemonth_2236_0801.pkl']
+		self.partial_regression(fileList, 'asfsp', [('oc',3,'equal'), ('hc',10,'less')], testFileList)
+		print "Half year----------------------------"
+		fileList = ['data/halfyear_2236_0401.pkl']
+		self.partial_regression(fileList, 'asfsp', [('oc',3,'equal'), ('hc',10,'less')], testFileList)
+		print "One year----------------------------"
+		fileList = ['data/oneyear_2236_0801.pkl']
+		self.partial_regression(fileList, 'asfsp', [('oc',3,'equal'), ('hc',10,'less')], testFileList)
+
+
+	def partial_regression(self, fileList, key, conditionList, testFileList):
+		dataDict = self.filelist_to_dict(fileList)
+		dataDF = dataDict[key]
+		filteredData = self.conditional_filter(dataDF, key, conditionList)
+		testDict = self.filelist_to_dict(testFileList)
+		testDF = testDict[key]
+		filteredTestData = self.conditional_filter(testDF, key, conditionList)
+		for pointType, data in filteredData.drop(key, axis=1).iterkv():
+			print pointType
+			model = LinearRegression()
+			df = pd.DataFrame({pointType:data})
+			fitted = model.fit(df, filteredData[key])
+			try:
+				print xs.keys()
+				print model.coef_
+				pass
+			except:
+				pass
+			yTest = fitted.predict(pd.DataFrame({pointType:filteredTestData[pointType]}))
+			yLearn = fitted.predict(pd.DataFrame({pointType:data}))
+
+			learnRmse = sqrt(mean_squared_error(filteredData[key], yLearn))
+			testRmse = sqrt(mean_squared_error(filteredTestData[key], yTest))
+			normRmse = testRmse/np.mean(yTest)
+			print 'Learn RMSE:\t', learnRmse
+			print 'Test RMSE:\t', testRmse
+		
 			
-			ocList = ocSeries.tolist()
-			csList = self.data_allign(ocSeries, csSeries, 'left')
-			acsList = self.data_allign(ocSeries, acsSeries, 'right')
-			newDF = pd.DataFrame({'acs':acsList, 'cs':csList, 'oc':ocList})
-			acsDF = pd.concat([acsDF, newDF])
+
+
+
+	def all_relationship(self):
+		#filenameList = ['data/oneyear_3148_0701.pkl']
+		#filenameList = ['data/onemonth_3148_0801.pkl']
+		#filenameList = ['data/onemonth_3148_0101.pkl']
+		filenameList = ['data/oneday_2230_0801.pkl']
+		#filenameList.append('data/oneyear_3256_0701.pkl')
+		print 'hc'
+		self.simple_relationship(filenameList, 'hc', [('oc',3)])
+		print 'asfsp'
+		self.simple_relationship(filenameList, 'asfsp', [('oc',3)])
+		print 'acs'
+		self.simple_relationship(filenameList, 'acs', [('oc',3)])
+		print 'cc'
+		#self.simple_relationship(filenameList, 'cc', [('oc',3), ('acs', 74)])
+		self.simple_relationship(filenameList, 'cc', [('oc',3)])
+
+#		filenameList = ['data/onemonth_3256_0901.pkl']
+#		#filenameList.append('data/oneyear_3256_0701.pkl')
+#		self.simple_relationship(filenameList, 'asfsp', [('oc',3)])
+		
+#		filenameList = ['data/oneyear_3256_0701.pkl']
+#		self.simple_relationship(filenameList, 'asfsp', [('oc',1)])
+		
+#		filenameList = ['data/reg_safsp_3256_1006.pkl']
+#		self.simple_relationship(filenameList, 'asfsp', [('oc',3),('hc',0)])
+		
+#		filenameList = ['data/oneyear_3256_0701.pkl']
+#		self.simple_relationship(filenameList, 'dc', [])
 
 	def merge_data(self, data1, dataList):
 		dataDict = dict()
@@ -268,7 +357,6 @@ class FindControl:
 		self.fit_for_a_type(acsahsLearnFiles, acsahsTestFiles, 'acs', auxFileList=acsahsAuxFiles)
 		self.fit_for_a_type(acsahsLearnFiles, acsahsTestFiles, 'ahs')
 		
-		
 		print "=======================CC STARTS (MIXED)==========================="
 		ccLearnFiles = list()
 		ccTestFiles = list()
@@ -280,8 +368,6 @@ class FindControl:
 		ccTestFiles.append('data/oneyear_3152_0101.pkl')
 		self.fit_for_a_type(ccLearnFiles, ccTestFiles, 'cc', auxFileList=ccAuxFiles)
 		
-		
-
 
 		print "=======================ASFSP STARTS (w/o CONTROL)==========================="
 		ccLearnFiles = list()

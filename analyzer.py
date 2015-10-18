@@ -6,6 +6,7 @@ from feature_extractor import FeatureExtractor
 from clusterer import Clusterer
 
 import pandas as pd
+from collections import defaultdict
 import numpy as np
 from datetime import datetime, timedelta
 #import sklearn.cluster.KMeans as KMeans
@@ -151,16 +152,17 @@ class Analyzer:
 		procData = self.normalize_data(rawData, beginTime, endTime, normType)
 		return procData
 
-	def receive_entire_sensors_notstore(self, beginTime, endTime, normType):
+	def receive_entire_sensors_notstore(self, beginTime, endTime, normType, exceptZoneList=[]):
 		#TODO: Should be parallelized here
 		dataDict = dict()
 		for zone in self.zonelist:
-			dataDict[zone] = self.receive_zone_sensors(zone, beginTime, endTime, normType)
+			if not zone in exceptZoneList:
+				dataDict[zone] = self.receive_zone_sensors(zone, beginTime, endTime, normType)
 		return dataDict
 	
-	def receive_entire_sensors(self, beginTime, endTime, filename, normType):
+	def receive_entire_sensors(self, beginTime, endTime, filename, normType, exceptZoneList=[]):
 #		filename='data/'+beginTime.isoformat()[0:-7].replace(':','_') + '.pkl'
-		dataDict = self.receive_entire_sensors_notstore(beginTime, endTime, normType)
+		dataDict = self.receive_entire_sensors_notstore(beginTime, endTime, normType, exceptZoneList=exceptZoneList)
 		with open(filename, 'wb') as fp:
 			pickle.dump(dataDict, fp)
 #			json.dump(dataDict,fp)
@@ -191,6 +193,8 @@ class Analyzer:
 	def receive_zone_sensors(self, zone, beginTime, endTime, normType):
 		zoneDict = dict()
 		for actuType in self.actuNames.nameList+self.sensorNames.nameList:
+			if actuType=='Actual Supply Flow':
+				pass
 			try:
 				uuid = self.get_actuator_uuid(zone, actuType)
 			except QRError:
@@ -214,3 +218,67 @@ class Analyzer:
 		data = self.receive_zone_sensors(zone, beginTime, endTime, normType)
 		with open(filename, 'wb') as fp:
 			pickle.dump(data, fp)
+
+	def store_minmax_dict(self):
+		minDict = defaultdict(dict)
+		maxDict = defaultdict(dict)
+		beginTime = datetime(2015,2,1)
+		endTime = datetime(2015,9,1)
+		shortBeginTime = datetime(2015,8,1)
+		shortEndTime = datetime(2015,8,2)
+
+		for zone in self.zonelist:
+			for pointType in self.actuNames.nameList+self.sensorNames.nameList:
+				try:
+					if pointType=='Occupied Command':
+						minDict[zone][pointType] = 1
+						maxDict[zone][pointType] = 3
+					elif pointType=='Cooling Command':
+						minDict[zone][pointType] = 0
+						maxDict[zone][pointType] = 100
+					elif pointType=='Cooling Command' or pointType=='Heating Command':
+						minDict[zone][pointType] = 0
+						maxDict[zone][pointType] = 100
+					elif pointType=='Occupied Clg Min' or pointType=='Occupied Htg Flow' or pointType=='Cooling Max Flow':
+						uuid = self.get_actuator_uuid(zone, pointType)
+						data = self.bdm.get_sensor_ts(uuid, 'Presentvalue', shortBeginTime, shortEndTime)
+						minDict[zone][pointType] = min(data)
+						maxDict[zone][pointType] = max(data)
+					elif pointType=='Temp Occ Sts':
+						minDict[zone][pointType] = 0
+						maxDict[zone][pointType] = 1
+					elif pointType=='Reheat Valve Command':
+						minDict[zone][pointType] = 0
+						maxDict[zone][pointType] = 100
+					elif pointType=='Actual Supply Flow' or pointType=='Actual Sup Flow SP':
+						uuid = self.get_actuator_uuid(zone, pointType)
+						data = self.bdm.get_sensor_ts(uuid, 'Presentvalue', shortBeginTime, shortEndTime)
+						maxFlow = data[0]
+						minDict[zone][pointType] = 0
+						maxDict[zone][pointType] = maxFlow
+					elif pointType=='Damper Position':
+						minDict[zone][pointType] = 0
+						maxDict[zone][pointType] = 100
+					elif pointType=='Damper Command':
+						uuid = self.get_actuator_uuid(zone, pointType)
+						data = self.bdm.get_sensor_ts(uuid, 'Presentvalue', shortBeginTime, shortEndTime)
+						meanData = np.mean(data)
+						stdData = np.std(data)
+						meanAgain = np.mean(data[np.logical_and(data<=meanData+2*stdData, data>=meanData-2*stdData)])
+						minDict[zone][pointType] = meanData-2*stdData
+						maxDict[zone][pointType] = meanData+2*stdData
+					else:
+						uuid = self.get_actuator_uuid(zone, pointType)
+						data = self.bdm.get_sensor_ts(uuid, 'Presentvalue', beginTime, endTime)
+						minDict[zone][pointType] = min(data)
+						maxDict[zone][pointType] = max(data)
+
+				except:
+					print "Something is wrong"
+					pass
+		with open('metadata/mindict.pkl', 'wb') as fp:
+			pickle.dump(minDict, fp)
+		with open('metadata/maxdict.pkl', 'wb') as fp:
+			pickle.dump(maxDict, fp)
+
+

@@ -187,7 +187,7 @@ def plot_colormap(data, figSizeIn, xlabel, ylabel, cbarlabel, cmapIn, ytickRange
 	plt.show()
 	return fig
 
-def plot_colormap_upgrade2(data, xlabel=None, ylabel=None, cbarLabel=None, cmapIn=None, ytickRange=None, ytickTag=None, xtickRange=None, xtickTag=None, title=None, xmin=None, xmax=None, xgran=None, ymin=None, ymax=None, figSizeIn=None, ygran=None, fig=None, ax=None):
+def plot_colormap_upgrade2(data, xlabel=None, ylabel=None, cbarLabel=None, cmapIn=None, ytickRange=None, ytickTags=None, xtickRange=None, xtickTags=None, title=None, xmin=None, xmax=None, xgran=None, ymin=None, ymax=None, figSizeIn=None, ygran=None, fig=None, ax=None):
 	if fig==None:
 		fig, ax = plt.subplots(1,1)
 	if xmin != None:
@@ -207,19 +207,32 @@ def plot_colormap_upgrade2(data, xlabel=None, ylabel=None, cbarLabel=None, cmapI
 
 	if ylabel!=None:
 		ax.set_ylabel(ylabel)
-#	if xtickTag:
-#		plt.xticks(xtickRange, xtickTag, fontsize=10)
-#
-#	plt.yticks(ytickRange, ytickTag, fontsize=10)
-	if xmin!=None and xmax!= None:
-		ax.set_xlim((xmin-1, xmax+1))
-	if ymin!=None and ymax!=None:
-		ax.set_ylim((ymin-1, ymax+1))
+	if xtickTags!=None and xtickRange!=None:
+		ax.set_xticks(xtickRange)
+		ax.set_xticklabels(xtickTags, fontsize=9, horizontalalignment='left')
+		#ax.tick_params(left='on', right='on')
+#		for label in ax.xaxis.get_majorticklabels():
+#			label.set_position((1,1))
+#		label = ax.xaxis.get_majorticklabels()[3]
+#		print label.get_position()
+#		label.set_position((5,1))
+#		print label.get_position()
+
+		#ax.tick_params(direction='right', pad=20)
+
+	if ytickTags!=None and ytickRange!=None:
+		ax.set_yticks(ytickRange)
+		ax.set_yticklabels(ytickTags, fontsize=9, verticalalignment='bottom')
+
+#	if xmin!=None and xmax!= None:
+#		ax.set_xlim((xmin, xmax))
+#	if ymin!=None and ymax!=None:
+#		ax.set_ylim((ymin-1, ymax+1))
 	if title:
 		ax.set_title(title)
 	plt.tight_layout()
-	plt.show()
-	return fig
+#	plt.show()
+	return fig, ax
 
 
 def plot_colormap_upgrade(data, figSizeIn, xlabel, ylabel, cbarlabel, cmapIn, ytickRange, ytickTag, xtickRange=None, xtickTag=None, title=None, xmin=None, xmax=None, xgran=None, ymin=None, ymax=None, ygran=None):
@@ -252,11 +265,11 @@ def plot_colormap_upgrade(data, figSizeIn, xlabel, ylabel, cbarlabel, cmapIn, yt
 	plt.show()
 	return fig
 
-def plot_timeseries(x, y, xlabel=None, ylabel=None,  xticks=None, xtickTags=None, yticks=None, ytickTags=None, title=None, xtickRotate=None, dateFormat=None,color=None, axis=None, fig=None, dataLabel=None, ymin=None, ymax=None, xmax=None, xmin=None, ytickRotate=None):
+def plot_timeseries(x, y, xlabel=None, ylabel=None,  xticks=None, xtickTags=None, yticks=None, ytickTags=None, title=None, xtickRotate=None, dateFormat=None,color=None, axis=None, fig=None, dataLabel=None, ymin=None, ymax=None, xmax=None, xmin=None, ytickRotate=None, lineStyle='-'):
 	if axis==None:
 		fig, axis = plt.subplots(1,1)
 	
-	plotObj = axis.plot_date(x, y, linestyle='-', marker='None',tz=pst, color=color, label=dataLabel)
+	plotObj = axis.plot_date(x, y, linestyle=lineStyle, marker='None',tz=pst, color=color, label=dataLabel)
 	if xmin!=None and xmax!= None:
 		axis.set_xlim((xmin-1, xmax+1))
 	if ymin!=None and ymax!=None:
