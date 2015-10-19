@@ -202,18 +202,18 @@ def plot_colormap_upgrade2(data, xlabel=None, ylabel=None, cbarLabel=None, cmapI
 
 	if cbarTicks!=None:
 		cbar = fig.colorbar(p, ticks=cbarTicks)
-		cbar.ax.set_yticklabels(cbartickLabels)
+		cbar.ax.set_yticklabels(cbartickLabels,fontsize=7)
 	else:
 		cbar = fig.colorbar(p)
-	cbar.set_label(cbarLabel, labelpad=1)
+	cbar.set_label(cbarLabel, labelpad=1,fontsize=7)
 	if xlabel!=None:
-		ax.set_xlabel(xlabel)
+		ax.set_xlabel(xlabel,fontsize=7)
 
 	if ylabel!=None:
-		ax.set_ylabel(ylabel)
+		ax.set_ylabel(ylabel,fontsize=7)
 	if xtickTags!=None and xtickRange!=None:
 		ax.set_xticks(xtickRange)
-		ax.set_xticklabels(xtickTags, fontsize=9, horizontalalignment='left', rotation=xtickRotate)
+		ax.set_xticklabels(xtickTags, fontsize=7, horizontalalignment='left', rotation=xtickRotate)
 		#ax.tick_params(left='on', right='on')
 #		for label in ax.xaxis.get_majorticklabels():
 #			label.set_position((1,1))
@@ -226,7 +226,7 @@ def plot_colormap_upgrade2(data, xlabel=None, ylabel=None, cbarLabel=None, cmapI
 
 	if ytickTags!=None and ytickRange!=None:
 		ax.set_yticks(ytickRange)
-		ax.set_yticklabels(ytickTags, fontsize=9, verticalalignment='bottom')
+		ax.set_yticklabels(ytickTags, fontsize=7, verticalalignment='bottom')
 
 #	if xmin!=None and xmax!= None:
 #		ax.set_xlim((xmin, xmax))
@@ -269,7 +269,7 @@ def plot_colormap_upgrade(data, figSizeIn, xlabel, ylabel, cbarlabel, cmapIn, yt
 	plt.show()
 	return fig
 
-def plot_timeseries(x, y, xlabel=None, ylabel=None,  xticks=None, xtickTags=None, yticks=None, ytickTags=None, title=None, xtickRotate=None, dateFormat=None,color=None, axis=None, fig=None, dataLabel=None, ymin=None, ymax=None, xmax=None, xmin=None, ytickRotate=None, lineStyle='-'):
+def plot_timeseries(x, y, xlabel=None, ylabel=None,  xticks=None, xtickTags=None, yticks=None, ytickTags=None, title=None, xtickRotate=None, dateFormat=None,color=None, axis=None, fig=None, dataLabel=None, ymin=None, ymax=None, xmax=None, xmin=None, ytickRotate=None, lineStyle='-', tickLocator=None):
 	if axis==None:
 		fig, axis = plt.subplots(1,1)
 	
@@ -311,6 +311,8 @@ def plot_timeseries(x, y, xlabel=None, ylabel=None,  xticks=None, xtickTags=None
 	#fig.autofmt_xdate()
 	if dateFormat!=None:
 		axis.xaxis.set_major_formatter(dateFormat)
+	if tickLocator!=None:
+		axis.xaxis.set_major_locator(tickLocator)
 	
 	if title!=None:
 		axis.set_title(title)

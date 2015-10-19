@@ -42,3 +42,8 @@ for zone in zonelist:
 	anal.store_zone_sensors(zone, datetime(2015,10,16,20,30),datetime(2015,10,16,22,10), 'nextval', 'data/dep/dep_cs_'+zone.replace('RM-','')+'_1017.pkl')
 	anal.store_zone_sensors(zone, datetime(2015,10,16,22,14),datetime(2015,10,17,1,10), 'nextval', 'data/dep/dep_oc_'+zone.replace('RM-','')+'_1017.pkl')
 	anal.store_zone_sensors(zone, datetime(2015,10,17,1,10),datetime(2015,10,17,4,25), 'nextval', 'data/dep/dep_cc_'+zone.replace('RM-','')+'_1017.pkl')
+
+
+zonelist = ['RM-2112', 'RM-2108', 'RM-2118', 'RM-2226', 'RM-2230']
+for zone in zonelist:
+	anal.store_zone_sensors(zone, datetime(2015,10,18,18,30),datetime(2015,10,18,19,40), 'nextval', 'data/dep/dep_acfsp_'+zone.replace('RM-','')+'_1018.pkl')

@@ -33,7 +33,8 @@ class FindDep:
 	bdm = None
 	anal = None
 	outputfile = None
-	allKeys = ['cs', 'oc', 'acs', 'ahs', 'zt', 'cc', 'hc', 'rvc', 'cmf', 'ocm', 'ohf', 'asfsp', 'asf', 'dp', 'dc']
+	#allKeys = ['cs', 'oc', 'acs', 'ahs', 'zt', 'cc', 'hc', 'rvc', 'cmf', 'ocm', 'ohf', 'asfsp', 'asf', 'dp', 'dc']
+	allKeys = ['cs', 'oc', 'cc', 'hc', 'rvc', 'asfsp','dc']
 	def __init__ (self):
 		self.zonelist = basic.csv2list('metadata/partialzonelist.csv')
 		self.actuNames = ActuatorNames()
@@ -72,18 +73,18 @@ class FindDep:
 		output = dict()
 		output['cs'] = newcs
 		output['oc'] = oc
-		output['acs'] = acs
-		output['ahs'] = ahs
-		output['zt'] = zt
+		#output['acs'] = acs
+		#output['ahs'] = ahs
+		#output['zt'] = zt
 		output['cc'] = cc
 		output['hc'] = hc
 		output['rvc'] = rvc
-		output['cmf'] = cmf
-		output['ocm'] = ocm
-		output['ohf'] = ohf
+		#output['cmf'] = cmf
+		#output['ocm'] = ocm
+		#output['ohf'] = ohf
 		output['asfsp'] = asfsp
-		output['asf'] = asf
-		output['dp'] = dp
+		#output['asf'] = asf
+		#output['dp'] = dp
 		output['dc'] = dc
 
 		return output
@@ -222,6 +223,7 @@ class FindDep:
 		filedictdictlist['RM-2108']['cc'].append('data/dep/dep_cc_2108_1016.pkl')
 		filedictdictlist['RM-2108']['oc'].append('data/dep/dep_cc_2108_1017.pkl')
 		filedictdictlist['RM-2108']['hc'].append('data/dep/dep_hc_2108_1015.pkl')
+		filedictdictlist['RM-2108']['asfsp'].append('data/dep/dep_asfsp_2108_1018.pkl')
 
 		filedictdictlist['RM-2112'] = defaultdict(list)
 		filedictdictlist['RM-2112']['cs'].append('data/dep/dep_cs_2112_1015.pkl')
@@ -234,6 +236,7 @@ class FindDep:
 		filedictdictlist['RM-2112']['cc'].append('data/dep/dep_cc_2112_1016.pkl')
 		filedictdictlist['RM-2112']['oc'].append('data/dep/dep_cc_2112_1017.pkl')
 		filedictdictlist['RM-2112']['hc'].append('data/dep/dep_hc_2112_1015.pkl')
+		filedictdictlist['RM-2112']['asfsp'].append('data/dep/dep_asfsp_2112_1018.pkl')
 
 		filedictdictlist['RM-2118'] = defaultdict(list)
 		filedictdictlist['RM-2118']['cs'].append('data/dep/dep_cs_2118_1015.pkl')
@@ -246,6 +249,7 @@ class FindDep:
 		filedictdictlist['RM-2118']['cc'].append('data/dep/dep_cc_2118_1016.pkl')
 		filedictdictlist['RM-2118']['oc'].append('data/dep/dep_cc_2118_1017.pkl')
 		filedictdictlist['RM-2118']['hc'].append('data/dep/dep_hc_2118_1015.pkl')
+		filedictdictlist['RM-2118']['asfsp'].append('data/dep/dep_asfsp_2118_1018.pkl')
 
 		filedictdictlist['RM-2226'] = defaultdict(list)
 		filedictdictlist['RM-2226']['cs'].append('data/dep/dep_cs_2226_1012.pkl')
@@ -258,6 +262,7 @@ class FindDep:
 		filedictdictlist['RM-2226']['asfsp'].append('data/dep/dep_asfsp_2226_1013.pkl')
 		filedictdictlist['RM-2226']['dc'].append('data/dep/dep_dc_2226_1012.pkl')
 		filedictdictlist['RM-2226']['dc'].append('data/dep/dep_dc_2226_1013.pkl')
+		#filedictdictlist['RM-2226']['asfsp'].append('data/dep/dep_asfsp_2226_1018.pkl')
 
 		filedictdictlist['RM-2230'] = defaultdict(list)
 		filedictdictlist['RM-2230']['cs'].append('data/dep/dep_cs_2230_1012.pkl')
@@ -270,6 +275,7 @@ class FindDep:
 		filedictdictlist['RM-2230']['asfsp'].append('data/dep/dep_asfsp_2230_1013.pkl')
 		filedictdictlist['RM-2230']['dc'].append('data/dep/dep_dc_2230_1012.pkl')
 		filedictdictlist['RM-2230']['dc'].append('data/dep/dep_dc_2230_1013.pkl')
+		#filedictdictlist['RM-2230']['asfsp'].append('data/dep/dep_asfsp_2230_1018.pkl')
 
 		probDict = dict()
 		pprinter = pprint.PrettyPrinter(indent=4)

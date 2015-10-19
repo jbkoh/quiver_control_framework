@@ -9,6 +9,7 @@ from quiver import QRError
 from analyzer import Analyzer
 from matplotlib.dates import DateFormatter
 from pytz import timezone
+from matplotlib.dates import HourLocator
 
 pst = timezone('US/Pacific')
 
@@ -50,7 +51,7 @@ class QuiverPlotter:
 		g = lambda tp:self.pst.localize(tp)
 		#dateFormat = None
 		dateFormat = DateFormatter('%I %p', tz=pst)
-		for idx, (zone, actuType, ylabels, yminmax, ytickRange, ytickTags) in enumerate(dataDict):
+		for idx, (zone, actuType, ylabels, yminmax, ytickRange, ytickTags, legends) in enumerate(dataDict):
 			if yminmax!=None:
 				ymin=yminmax[0]
 				ymax=yminmax[1]
@@ -68,6 +69,9 @@ class QuiverPlotter:
 				xtickTags = None
 				xlabel = 'Time (Hour)'
 
+			if legends==None:
+				legends = actuType
+
 			if type(actuType)!=list:
 				#title = zone + ", " + actuType
 				title = None
@@ -83,8 +87,8 @@ class QuiverPlotter:
 #				data = self.bdm.get_sensor_ts(uuid, 'PresentValue', beginTime, endTime)
 				data = self.anal.receive_a_sensor(zone, actuType, beginTime, endTime, 'nextval')
 				tp = map(g, data.index)
-				plotter.plot_timeseries(tp, data.values, axis=axes[idx], ylabel=ylabels, title=title, dataLabel=actuType, xticks=xticks, xtickTags=xtickTags, ymin=ymin, ymax=ymax, yticks=ytickRange, ytickTags=ytickTags, xlabel=xlabel, ytickRotate=ytickRotate, color=clist[0], lineStyle=llist[0])
-				axes[idx].legend(loc='best', fontsize=legendFontSize)
+				plotter.plot_timeseries(tp, data.values, axis=axes[idx], ylabel=ylabels, title=title, dataLabel=legends, xticks=xticks, xtickTags=xtickTags, ymin=ymin, ymax=ymax, yticks=ytickRange, ytickTags=ytickTags, xlabel=xlabel, ytickRotate=ytickRotate, color=clist[0], lineStyle=llist[0])
+				axes[idx].legend(loc='best', fontsize=legendFontSize, borderaxespad=0, mode='expand')
 			else:
 				plotObjList = list()
 				if len(actuType)==4:
@@ -97,18 +101,23 @@ class QuiverPlotter:
 					uuid2 = self.get_actuator_uuid(zone, actuType[1])
 					data1 = self.bdm.get_sensor_ts(uuid1, 'PresentValue', beginTime, endTime)
 					data2 = self.bdm.get_sensor_ts(uuid2, 'PresentValue', beginTime, endTime)
+					(ymin1,ymax1) = yminmax[0]
+					(ymin2,ymax2) = yminmax[1]
 					tp1 = map(g, data1.index)
 					tp2 = map(g, data2.index)
 					ax1 = axes[idx]
 					ax2 = ax1.twinx()
-					_,_,plotObj = plotter.plot_timeseries(tp1,data1.values, axis=ax1, ylabel=ylabels[0], dataLabel=actuType[0], xticks=xticks, xtickTags=xtickTags, dateFormat=dateFormat, color=clist[0], xlabel=xlabel, ymin=ymin, ymax=ymax, yticks=ytickRange[0], ytickTags=ytickTags[0])
-					plotObjList.append(plotObj)
-					_,_,plotObj = plotter.plot_timeseries(tp2,data2.values, axis=ax2, ylabel=ylabels[1], dataLabel=actuType[1], xticks=xticks, xtickTags=xtickTags, dateFormat=dateFormat, color=clist[1], xlabel=xlabel, ymin=ymin, ymax=ymax, yticks=ytickRange[1], ytickTags=ytickTags[1])
-					plotObjList.append(plotObj)
-					#axes[idx].legend(loc=3, bbox_to_anchor=bboxLoc, ncol=3, fontsize=legendFontSize, borderaxespad=0)
-					axes[idx].legend(loc='best',fontsize=legendFontSize, borderaxespad=0)
-					#ax2.legend(loc=3, bbox_to_anchor=bboxLoc, ncol=3, fontsize=legendFontSize,borderaxespad=0)
-					ax2.legend(loc='best', fontsize=legendFontSize,borderaxespad=0)
+					tickLocator = HourLocator()
+					
+					_,_,lns1 = plotter.plot_timeseries(tp1,data1.values, axis=ax1, ylabel=ylabels[0], dataLabel=legends[0], xticks=xticks, xtickTags=xtickTags, dateFormat=dateFormat, color=clist[0], xlabel=xlabel, ymin=ymin1, ymax=ymax1, yticks=ytickRange[0], ytickTags=ytickTags[0], tickLocator=tickLocator)
+					plotObjList.append(lns1)
+					_,_,lns2= plotter.plot_timeseries(tp2,data2.values, axis=ax2, ylabel=ylabels[1], dataLabel=legends[1], xticks=xticks, xtickTags=xtickTags, dateFormat=dateFormat, color=clist[1], xlabel=xlabel, ymin=ymin2, ymax=ymax2, yticks=ytickRange[1], ytickTags=ytickTags[1], tickLocator=tickLocator)
+					plotObjList.append(lns2)
+					lns = lns1+lns2
+					labs = [l.get_label() for l in lns]
+					#axes[idx].legend(loc='best',fontsize=legendFontSize, borderaxespad=0)
+					#ax2.legend(loc='best', fontsize=legendFontSize,borderaxespad=0)
+					ax1.legend(lns, labs, loc='best', fontsize=legendFontSize, ncol=ncol, mode='expand', borderaxespad=0)
 				else:
 					for innerIdx, oneActu in enumerate(actuType):
 						uuid = self.get_actuator_uuid(zone, oneActu)
@@ -119,7 +128,7 @@ class QuiverPlotter:
 #							dataLabelIdx += 1
 #						else:
 #							dataLabel = None
-						_,_,plotObj = plotter.plot_timeseries(tp,data.values, axis=axes[idx], ylabel=ylabels, dataLabel=oneActu, xticks=xticks, xtickTags=xtickTags, xlabel=xlabel, color=clist[innerIdx], lineStyle=llist[innerIdx], yticks=ytickRange, ytickTags=ytickTags, ymin=ymin, ymax=ymax)
+						_,_,plotObj = plotter.plot_timeseries(tp,data.values, axis=axes[idx], ylabel=ylabels, dataLabel=legends[innerIdx], xticks=xticks, xtickTags=xtickTags, xlabel=xlabel, color=clist[innerIdx], lineStyle=llist[innerIdx], yticks=ytickRange, ytickTags=ytickTags, ymin=ymin, ymax=ymax)
 						plotObjList.append(plotObj)
 					#axes[idx].legend(loc=3, bbox_to_anchor=bboxLoc, ncol=ncol,fontsize=legendFontSize, borderaxespad=0, mode='expand')
 					axes[idx].legend(loc='best', ncol=ncol,fontsize=legendFontSize, borderaxespad=0, mode='expand')
