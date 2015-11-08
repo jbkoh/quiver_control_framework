@@ -100,14 +100,9 @@ class Quiver:
 	def __del__(self):
 		pass
 
-#	def csv2list(self, filename):
-#		outputList = list()
-#		with open(filename, 'r') as fp:
-#			reader = csv.reader(fp, delimiter=',')
-#			for row in reader:
-#				outputList.append(row[0])
-#		return outputList
-
+	# Construct dependency map for all points
+	# Run this when you run this for the fisrt time
+	# TODO: For now, it finds all the points in the corresponding zone.
 	def init_dependency_map(self):
 		depZoneMap = defaultdict(list)
 		depUuidMap = defaultdict(list)
@@ -142,6 +137,8 @@ class Quiver:
 		server.sendmail(emailauth.fromaddr, emailauth.toaddrs, msg.as_string())
 		server.quit()
 
+# This is for NTP with UCSD BMS.
+# TODO: It should be done in OS itself. Any suggestion?
 	def update_time_offset(self):
 		ntpRequest = self.ntpClient.request(self.ntpURL)
 		ntpRequest.tx_time
@@ -149,6 +146,7 @@ class Quiver:
 		self.timeOffset = ntpTime - datetime.now()
 		return ntpTime
 	
+	# Currently, zone and actuator type is the easiest information for applications to use, so I use it to get uuid, but can be generalized.
 	def get_actuator_uuid(self, zone=None, actuType=None):
 		context = dict()
 		if zone != None:
@@ -304,6 +302,7 @@ class Quiver:
 		currTime = currTime + self.timeOffset
 		return currTime
 
+# PRIMARY function.
 	def issue_seq(self, seq):
 		logging.debug('Start issuing: \n%s', repr(seq))
 		self.validate_batch(seq)
@@ -574,6 +573,7 @@ class Quiver:
 	
 	def add_zone_zt_tacking(self,zone):
 		self.ztTrackZoneList.append(zone)
+
 	def remove_zone_zt_tacking(self,zone):
 		try:
 			self.ztTrackZoneList.remove(zone)

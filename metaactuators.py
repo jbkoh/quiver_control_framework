@@ -81,8 +81,6 @@ class CommonSetpoint(Actuator):
 class ActualCoolingSetpoint(Actuator):
 	zone = None
 	template = None
-
-#TODO: Is it okay to set minVal and maxVal arbitrarily outside this class?
 	def __init__ (self, name, uuid, minVal, maxVal, zone):
 		self.name = name
 		self.uuid = uuid
