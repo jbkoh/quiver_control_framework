@@ -85,7 +85,7 @@ class Quiver:
 		self.update_time_offset()
 		self.zonelist = basic.csv2list('metadata/zonelist.csv')
 		self.depMapFile = 'metadata/dependency_map.json'
-		requests.packages.urllib3.disable_warnings()
+	#	requests.packages.urllib3.disable_warnings()
 
 		# Create pid file for monitoring
 		pid = str(os.getpid())
@@ -141,7 +141,7 @@ class Quiver:
 # TODO: It should be done in OS itself. Any suggestion?
 	def update_time_offset(self):
 		ntpRequest = self.ntpClient.request(self.ntpURL)
-		ntpRequest.tx_time
+#		ntpRequest.tx_time
 		ntpTime = datetime.strptime(time.ctime(ntpRequest.tx_time), "%a %b %d %H:%M:%S %Y")
 		self.timeOffset = ntpTime - datetime.now()
 		return ntpTime
@@ -471,7 +471,7 @@ class Quiver:
 	def top_ntp(self):
 		ntpLatency = timedelta(minutes=30)
 		if self.ntpActivateTime<=self.now():
-			self.update_time_offset
+			self.update_time_offset()
 			self.ntpActivateTime = self.now() + ntpLatency
 
 	def system_close_common_behavior(self):

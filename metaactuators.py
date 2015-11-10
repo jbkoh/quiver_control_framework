@@ -1,19 +1,10 @@
-import master_actuator
-reload(master_actuator)
 from master_actuator import Actuator 
-import actuator_names
-reload(actuator_names)
 from actuator_names import ActuatorNames
-import sensor_names
-reload(sensor_names)
 from sensor_names import SensorNames
 from bd_wrapper import BDWrapper
-
 from datetime import datetime, timedelta
 
-
 #TODO: All the types of actuators classes should be implemented here with the super class, Actuator.
-
 
 def make_actuator(uuid, name, zone=None, actuType=None):
 	actuNames = ActuatorNames()

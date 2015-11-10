@@ -13,9 +13,9 @@ import json
 #	occupied = 3
 #
 class DefaultType(object):
-	minVal = None
+	minVal = None # soft = context max/min
 	maxVal = None
-	hardMinVal = None
+	hardMinVal = None # hard = physical max/min
 	hardMaxVal = None
 
 	def __init__(self, hardMinVal, hardMaxVal, minVal, maxVal):
@@ -95,19 +95,20 @@ class PercentType(DefaultType):
 	def validate(self, given):
 		return super(PercentType,self).validate(given)
 
+#parent of actuactor
 class Actuator(object):
 	__metaclass__ = ABCMeta
 	minLatency = None # 0 minimum
 	inputType = None # should be selected among above type classes
-	lowerActuators = list() 
-	higherActuators = list()
+	#lowerActuators = list() 
+	#higherActuators = list()
 	affectingDependencyDict = dict() # values of this dict are each actuator's minLatency
 	affectedDependencyDict = dict() # values of this dict are this actuator's minLatency
-	controlFlag = False
+	controlFlag = False 
 	uuid = None
 	name = None
 	bdm = None
-	sensorType = None
+	sensorType = None # ==actuator
 	resetVal = None
 	depMapFile = 'metadata/dependency_map.json'
 

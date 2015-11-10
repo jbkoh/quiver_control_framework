@@ -58,7 +58,7 @@ class BDWrapper:
 		isoBegin = self.pst.localize(beginTime)
 		isoEnd = self.pst.localize(endTime)
 		try:
-			rawData = self.bdDS.get_timeseries_datapoints(uuid, sensorType, isoBegin, isoEnd)
+			rawData = self.bdDS.get_timeseries_datapoints(uuid, sensorType, isoBegin, isoEnd) #return json
 			pdseries = self.rawts2pdseries(rawData['timeseries'])
 			#pdts = self.rawts2pdts(rawData['timeseries'])
 			return pdseries
